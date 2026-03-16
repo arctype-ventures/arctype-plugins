@@ -1,0 +1,11 @@
+{
+  "name": "arcvault",
+  "plugins": [
+    {
+      "name": "arcvault",
+      "description": "Obsidian vault skills for structured note-taking, meeting capture, and knowledge search powered by qmd",
+      "version": "0.1.0",
+      "source": "."
+    }
+  ]
+}
