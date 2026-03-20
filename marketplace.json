@@ -1,8 +1,8 @@
 {
-  "name": "arcvault",
+  "name": "arctype",
   "plugins": [
     {
-      "name": "arcvault",
+      "name": "hive-mind-plugin",
       "description": "Obsidian vault skills for structured note-taking, meeting capture, and knowledge search powered by qmd",
       "version": "0.1.0",
       "source": "."

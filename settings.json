@@ -1,6 +1,6 @@
 {
   "env": {
-    "ARCVAULT_PATH": "",
-    "ARCVAULT_COLLECTION": "arcvault"
+    "HIVE_MIND_PATH": "",
+    "HIVE_MIND_COLLECTION": "hive-mind"
   }
 }
