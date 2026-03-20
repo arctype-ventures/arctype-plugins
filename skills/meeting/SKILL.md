@@ -12,14 +12,15 @@ Create stub person notes for unknown attendees.
 
 ## Vault Location
 
-The vault path is defined by the `ARCVAULT_PATH` environment variable.
-The qmd collection name is defined by `ARCVAULT_COLLECTION` (default: `vault`).
+The vault path is defined by the `HIVE_MIND_PATH` environment variable.
+The qmd collection name is defined by `HIVE_MIND_COLLECTION` (default: `hive-mind`).
+The note author is defined by `HIVE_MIND_AUTHOR` (a wikilink to a `people/` entry).
 
-If `ARCVAULT_PATH` is unset, abort and tell the user to run `/arcvault:setup`.
+If `HIVE_MIND_PATH` is unset, abort and tell the user to run `./setup.sh` in the vault directory.
 
 ## Invocation
 
-`/arcvault:meeting <raw notes>`
+`/hive-mind:meeting <raw notes>`
 
 The raw notes are available as `$ARGUMENTS`. If `$ARGUMENTS` is empty,
 abort and tell the user to provide meeting notes.
@@ -35,12 +36,14 @@ Raw notes can be:
 
 ### 1. Validate prerequisites
 
-- Check `$ARCVAULT_PATH` is set. If not, abort with setup instructions.
+- Check `$HIVE_MIND_PATH` is set. If not, abort with setup instructions.
+- Check `$HIVE_MIND_COLLECTION` is set. If not, abort with setup instructions.
+- Check `$HIVE_MIND_AUTHOR` is set. If not, abort with setup instructions.
 - Check `$ARGUMENTS` is non-empty. If empty, abort with usage hint.
 
 ### 2. Read vault config
 
-Read the following files from `$ARCVAULT_PATH`:
+Read the following files from `$HIVE_MIND_PATH`:
 
 - `TAGS.md` — current valid tag list
 - `FRONTMATTER.md` — frontmatter schema
@@ -48,7 +51,7 @@ Read the following files from `$ARCVAULT_PATH`:
 Also list existing glossary terms for unfamiliar term resolution:
 
 ```bash
-ls $ARCVAULT_PATH/glossary/*.md 2>/dev/null
+ls $HIVE_MIND_PATH/glossary/*.md 2>/dev/null
 ```
 
 Do NOT rely on cached or hardcoded versions. Read fresh every invocation.
@@ -83,7 +86,7 @@ For each unfamiliar term, run a quick BM25 search to check if the vault
 has context:
 
 ```bash
-qmd search "<de-hyphenated term>" --json -n 3 -c $ARCVAULT_COLLECTION
+qmd search "<de-hyphenated term>" --json -n 3 -c $HIVE_MIND_COLLECTION
 ```
 
 Do NOT run semantic search for this — keep it fast.
@@ -165,13 +168,13 @@ entities first. **Never drop a person or repo query.**
 **BM25 (per entity):**
 
 ```bash
-qmd search "<de-hyphenated entity>" --json -n 5 -c $ARCVAULT_COLLECTION
+qmd search "<de-hyphenated entity>" --json -n 5 -c $HIVE_MIND_COLLECTION
 ```
 
 **Semantic (one pass for overall topic):**
 
 ```bash
-qmd vsearch "<conceptual description of the meeting>" --json -n 5 -c $ARCVAULT_COLLECTION
+qmd vsearch "<conceptual description of the meeting>" --json -n 5 -c $HIVE_MIND_COLLECTION
 ```
 
 The semantic query should be a 5–15 word natural language description.
@@ -215,13 +218,13 @@ For each attendee identified in step 3:
 1. Search the vault for an existing person note:
 
    ```bash
-   qmd search "<attendee name>" --json -n 3 -c $ARCVAULT_COLLECTION
+   qmd search "<attendee name>" --json -n 3 -c $HIVE_MIND_COLLECTION
    ```
 
    Also check `people/` directory directly:
 
    ```bash
-   ls $ARCVAULT_PATH/people/*.md 2>/dev/null
+   ls $HIVE_MIND_PATH/people/*.md 2>/dev/null
    ```
 
 2. **If found**: Record the wikilink path (e.g., `[[people/jane-smith|Jane Smith]]`)
@@ -231,7 +234,7 @@ For each attendee identified in step 3:
 If `qmd` is not installed, fall back to filename matching in `people/`:
 
 ```bash
-ls $ARCVAULT_PATH/people/ 2>/dev/null
+ls $HIVE_MIND_PATH/people/ 2>/dev/null
 ```
 
 ### 6. Create stub person notes
@@ -248,15 +251,14 @@ stub in `people/`.
 type: person
 title: <Full Name>
 description: <Role> at <Company>
-tags:
-  - people
-  - <repo-tag if associated with a repo>
+tags: []
 aliases:
   - <First Name>
   - <Full Name>
+author: "<$HIVE_MIND_AUTHOR value>"
 company: <company if inferrable from meeting context>
 role: <role if inferrable from meeting context>
-status: active
+project: <project name if associated with a specific project>
 icon: LiUser
 created: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
@@ -286,12 +288,8 @@ SORT file.cday DESC
 - If not inferrable, leave `company` and `role` empty (no value)
 - Always include at least the first name as an alias
 - Description falls back to just the full name if role/company unknown
-- **Tag people with their associated repo tag** when they are a contact
-  for a specific repo (e.g., a Texas One stakeholder gets `#texas-one`).
-  Companies map to repos — don't use `company` as a filter dimension on
-  meeting notes, use the repo tag on the person instead. This avoids
-  the problem where multiple repos share the same company (e.g., several
-  Salesforce-based repos with different people).
+- **Associate people with their project** using the `project:` frontmatter
+  field on person stubs when they are a contact for a specific project.
 - Report all created stubs to the user in the final summary
 
 ### 7. Generate structured meeting note
@@ -306,16 +304,14 @@ type: meeting
 title: <Descriptive meeting title>
 description: <1-2 sentence summary>
 tags:
-  - meetings
-  - <repo-tag if applicable>
   - <domain-tags>
 attendees:
   - "[[people/person-name|Display Name]]"
+author: "<$HIVE_MIND_AUTHOR value>"
 meeting-type: <inferred type>
 repo: <repo slug if applicable>
-status: active
+project: <project name — always required; use arctype for cross-cutting meetings>
 icon: LiUsers
-source: claude-code-session
 created: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
 ---
@@ -369,7 +365,7 @@ Anything else noteworthy that doesn't fit the above sections.
 
 ### 8. Validate tags
 
-All tags in frontmatter MUST exist in `$ARCVAULT_PATH/TAGS.md`.
+All tags in frontmatter MUST exist in `$HIVE_MIND_PATH/TAGS.md`.
 
 For any tag that doesn't exist, apply the three-check protocol from
 TAGS.md:
@@ -396,7 +392,7 @@ Examples:
 - `2026-02-23-darksail-auth-review.md`
 - `2026-02-23-client-kickoff-raiquun.md`
 
-**Target directory**: `$ARCVAULT_PATH/meetings/`
+**Target directory**: `$HIVE_MIND_PATH/meetings/`
 
 ### 10. Update search index
 
@@ -465,15 +461,23 @@ being captured from within a repo directory. Use the name exactly as-is.
 ### 2. Find the matching vault directory
 
 ```bash
-find "$ARCVAULT_PATH/repos" -type d -name "<repo-slug>" -maxdepth 3
+find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/sessions" | head -1
 ```
 
-- If exactly one match: use that path.
+Extract the project name from the matched path:
+
+```bash
+PROJECT=$(echo "$SESSIONS_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
+```
+
+- If exactly one match: use that path and set `PROJECT` from the extracted value.
 - If multiple matches: present them to the user and ask which to use.
-- If no match: proceed without a repo association.
+- If no match: default `PROJECT` to `arctype` and proceed without a repo association.
+
+Meeting notes must always have `project` set — never leave it blank.
 
 ### 3. If a repo is matched
 
-- Add the repo slug as a tag in `tags:`
 - Set the `repo:` frontmatter field
-- Link to the repo's index if discovered via search
+- Set the `project:` frontmatter field to the extracted `$PROJECT` value
+- Link to the project's index if discovered via search
