@@ -12,17 +12,18 @@ note to the user's Obsidian vault.
 
 ## Vault Location
 
-The vault path is defined by the `ARCVAULT_PATH` environment variable.
-The qmd collection name is defined by `ARCVAULT_COLLECTION` (default: `vault`).
+The vault path is defined by the `HIVE_MIND_PATH` environment variable.
+The qmd collection name is defined by `HIVE_MIND_COLLECTION` (default: `hive-mind`).
+The note author is defined by `HIVE_MIND_AUTHOR` (a wikilink to a `people/` entry).
 
-If `ARCVAULT_PATH` is unset, abort and tell the user to run `/arcvault:setup`.
+If `HIVE_MIND_PATH` is unset, abort and tell the user to run `./setup.sh` in the vault directory.
 
 ## Invocation Modes
 
-**Full session** — `/arcvault:note`
+**Full session** — `/hive-mind:note`
 Extract all notable insights from the entire session.
 
-**Focused** — `/arcvault:note <focus>`
+**Focused** — `/hive-mind:note <focus>`
 Extract insights related only to the specified focus area.
 The focus text is available as `$ARGUMENTS`.
 
@@ -42,24 +43,30 @@ transform it.
 
 ### 2. Find the matching vault directory
 
-Search for a directory matching the repo slug anywhere under `$ARCVAULT_PATH/repos`:
+Search for the sessions directory for the repo slug anywhere under `$HIVE_MIND_PATH/projects`:
 
 ```bash
-find "$ARCVAULT_PATH/repos" -type d -name "<repo-slug>" -maxdepth 3
+find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/sessions" | head -1
 ```
 
-- If exactly one match: use that path as the target directory.
+- If exactly one match: use that path as the target directory (`$SESSIONS_DIR`).
 - If multiple matches: present them to the user and ask which to use.
 - If no match: flag to the user and do not proceed with writing the note.
 
-### 3. Derive repo tag
+### 3. Derive project name
 
-The repo tag is the slug from step 1. Verify it exists in
-`$ARCVAULT_PATH/TAGS.md` — if not, apply the three-check protocol.
+Extract the project name from the resolved sessions path:
+
+```bash
+PROJECT=$(echo "$SESSIONS_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
+```
+
+The repo slug (from step 1) populates `repo:`. The extracted project name
+populates `project:`. There is no corresponding tag.
 
 ## Frontmatter
 
-Frontmatter MUST be standardized to the format described in `$ARCVAULT_PATH/FRONTMATTER.md`
+Frontmatter MUST be standardized to the format described in `$HIVE_MIND_PATH/FRONTMATTER.md`
 
 Declaritive frontmatter example:
 
@@ -69,14 +76,13 @@ type: note
 title: A short title for this note
 description: A short description of this note's context
 tags:
-  - <repo-tag> # repo tag that matches `repo: ` frontmatter
   - <domain-tag-1> # at least one required
   - <domain-tag-2> # optional
   - <domain-tag-3> # optional
-status: active
-repo: <repo-name> # Matches the repo tag
-icon: LiFileText # standard icon for this type of note
-source: claude-code-session
+author: "<$HIVE_MIND_AUTHOR value>"
+repo: <repo-name>
+project: <project-name>
+icon: LiFileText
 created: 2026-02-21
 updated: 2026-02-21
 ---
@@ -84,12 +90,11 @@ updated: 2026-02-21
 
 ## Valid Tags
 
-All tags MUST exist in `$ARCVAULT_PATH/TAGS.md`. Read that file every
+All tags MUST exist in `$HIVE_MIND_PATH/TAGS.md`. Read that file every
 time you generate a note — do not rely on a cached or hardcoded list.
 
 ### Tag Rules
 
-- Include the repo tag if a repo was matched (use the slug).
 - Include 1-3 domain tags that describe the technical subject matter.
 - If a tag you need is not in TAGS.md, apply the three-check protocol
   defined in the "Adding New Tags" section of TAGS.md:
@@ -168,13 +173,12 @@ type: note
 title: <Concise title summarizing the session focus>
 description: <1-2 sentence summary of what was accomplished>
 tags:
-  - <repo-slug if matched>
   - <domain-tag-1>
   - <domain-tag-2 if applicable>
-status: active
+author: "<$HIVE_MIND_AUTHOR value>"
 repo: <repo slug or empty>
+project: <project name or empty>
 icon: LiFileText
-source: claude-code-session
 created: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
 ---
@@ -245,9 +249,9 @@ Examples:
 
 1. Read `$ARGUMENTS` to determine mode (full vs focused).
 2. Determine repo slug from `pwd` (basename of working directory or git root).
-3. Resolve vault path from `$ARCVAULT_PATH`. Find the repo's vault directory
-   using `find "$ARCVAULT_PATH/repos" -type d -name "<repo-slug>" -maxdepth 3`.
-4. Read `$ARCVAULT_PATH/TAGS.md` to get the current valid tag list.
+3. Resolve vault path from `$HIVE_MIND_PATH`. Find the repo's sessions directory
+   using `find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/sessions" | head -1`.
+4. Read `$HIVE_MIND_PATH/TAGS.md` to get the current valid tag list.
 5. Scan current session context for extractable content per the 4 categories.
 6. **Discover vault context for linking.** If `qmd` is not installed, skip
    this entire step — the note will be created without wikilinks, same as
@@ -299,14 +303,14 @@ Examples:
    **BM25 (per entity)** — One query per named entity from 6a:
 
    ```bash
-   qmd search "<de-hyphenated entity>" --json -n 5 -c $ARCVAULT_COLLECTION
+   qmd search "<de-hyphenated entity>" --json -n 5 -c $HIVE_MIND_COLLECTION
    ```
 
    **Semantic (one pass for primary topic)** — One `vsearch` query for
    the note's overall topic, phrased as a natural language concept:
 
    ```bash
-   qmd vsearch "<conceptual description of the note's topic>" --json -n 5 -c $ARCVAULT_COLLECTION
+   qmd vsearch "<conceptual description of the note's topic>" --json -n 5 -c $HIVE_MIND_COLLECTION
    ```
 
    The semantic query should be a 5–15 word natural language description,
@@ -366,7 +370,7 @@ Examples:
    context from step 6 to insert `[[wikilinks]]` to related vault notes
    where the content naturally references their topics. Link on first
    mention only; do not add a separate "Related Notes" section.
-8. Validate that ALL tags in frontmatter exist in `$ARCVAULT_PATH/TAGS.md`.
+8. Validate that ALL tags in frontmatter exist in `$HIVE_MIND_PATH/TAGS.md`.
    For any tag that doesn't exist, apply the three-check protocol from
    TAGS.md. If it passes, add the tag to TAGS.md and keep it. If it fails,
    replace it with the closest broader existing tag. Cross-reference domain
