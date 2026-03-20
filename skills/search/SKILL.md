@@ -12,16 +12,16 @@ Search the user's Obsidian vault using qmd and return relevant results.
 ## Prerequisites
 
 - `qmd` must be installed and on `$PATH`
-- `$ARCVAULT_PATH` environment variable must be set (path to vault root)
-- `$ARCVAULT_COLLECTION` must name the qmd collection (default: `vault`)
+- `$HIVE_MIND_PATH` environment variable must be set (path to vault root)
+- `$HIVE_MIND_COLLECTION` must name the qmd collection (default: `hive-mind`)
 
-If any prerequisite is missing, tell the user to run `/arcvault:setup`.
+If any prerequisite is missing, tell the user to run `./setup.sh` in the vault directory.
 
 ## Invocation
 
-`/arcvault:search <query>` — BM25 keyword search (fast, exact terms)
-`/arcvault:search <query> --semantic` — Vector search (conceptual similarity)
-`/arcvault:search <query> --hybrid` — Hybrid with LLM reranking (best quality, slowest)
+`/hive-mind:search <query>` — BM25 keyword search (fast, exact terms)
+`/hive-mind:search <query> --semantic` — Vector search (conceptual similarity)
+`/hive-mind:search <query> --hybrid` — Hybrid with LLM reranking (best quality, slowest)
 
 Default is BM25 keyword search. Use `--semantic` when the query is
 conceptual or phrased as a question. Use `--hybrid` when precision matters.
@@ -57,19 +57,19 @@ by a scheduled job.
 **Keyword (default)**:
 
 ```bash
-qmd search "<query>" --json -n 10 -c $ARCVAULT_COLLECTION
+qmd search "<query>" --json -n 10 -c $HIVE_MIND_COLLECTION
 ```
 
 **Semantic** (`--semantic`):
 
 ```bash
-qmd vsearch "<query>" --json -n 10 -c $ARCVAULT_COLLECTION
+qmd vsearch "<query>" --json -n 10 -c $HIVE_MIND_COLLECTION
 ```
 
 **Hybrid** (`--hybrid`):
 
 ```bash
-qmd query "<query>" --json -n 10 -c $ARCVAULT_COLLECTION
+qmd query "<query>" --json -n 10 -c $HIVE_MIND_COLLECTION
 ```
 
 ### 3. Parse and present results
@@ -119,5 +119,5 @@ qmd get "<filepath>" --full
 ## Error Handling
 
 - If `qmd` is not found: tell user to install it (`npm install -g @tobilu/qmd`)
-- If no collection exists: tell user to run `qmd collection add $ARCVAULT_PATH --name $ARCVAULT_COLLECTION`
+- If no collection exists: tell user to run `qmd collection add $HIVE_MIND_PATH --name $HIVE_MIND_COLLECTION`
 - If no results: suggest trying a different search mode or broader terms
