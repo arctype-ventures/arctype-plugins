@@ -1,5 +1,5 @@
 ---
-name: note
+name: session-note
 description: Extract key insights from the current Claude Code session and write them as a structured Obsidian note. Use only when explicitly invoked by the user at the end of a meaningful session. Supports optional focus arguments to narrow extraction scope.
 argument-hint: "[optional focus: e.g. 'the JWT auth decision', 'debugging the batch job']"
 disable-model-invocation: true
@@ -20,10 +20,10 @@ If `HIVE_MIND_PATH` is unset, abort and tell the user to run `./setup.sh` in the
 
 ## Invocation Modes
 
-**Full session** — `/hive-mind:note`
+**Full session** — `/hive-mind:session-note`
 Extract all notable insights from the entire session.
 
-**Focused** — `/hive-mind:note <focus>`
+**Focused** — `/hive-mind:session-note <focus>`
 Extract insights related only to the specified focus area.
 The focus text is available as `$ARGUMENTS`.
 
