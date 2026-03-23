@@ -1,3 +1,5 @@
+# Claude.md
+
 This is the Arctype plugin marketplace for Claude Code. It distributes plugins for Obsidian vault integration, structured note-taking, meeting capture, and knowledge search powered by qmd.
 
 ## Marketplace Structure
@@ -9,7 +11,6 @@ plugins/
   hive-mind/             # First plugin
     .claude-plugin/
       plugin.json               # Plugin manifest (name, version)
-    settings.json               # Default env var values
     skills/                     # One directory per skill, each with a SKILL.md
 ```
 
@@ -17,13 +18,13 @@ To add another plugin, create a new directory under `plugins/` with its own `.cl
 
 ## Skills
 
-| Skill | Purpose | Input |
-|-------|---------|-------|
-| `search` | Query the vault via qmd | Search query |
-| `session-note` | Capture session insights as a vault note | Optional focus scope |
-| `meeting` | Structure raw meeting notes with attendees, decisions, action items | Raw notes or transcript |
-| `pr-note` | Document a PR — what changed, why, decisions made | PR number/URL or infers from branch |
-| `issue-note` | Investigation brief for a GitHub issue with codebase scan | Issue number/URL or infers from branch |
+| Skill          | Purpose                                                             | Input                                  |
+| -------------- | ------------------------------------------------------------------- | -------------------------------------- |
+| `search`       | Query the vault via qmd                                             | Search query                           |
+| `session-note` | Capture session insights as a vault note                            | Optional focus scope                   |
+| `meeting`      | Structure raw meeting notes with attendees, decisions, action items | Raw notes or transcript                |
+| `pr-note`      | Document a PR — what changed, why, decisions made                   | PR number/URL or infers from branch    |
+| `issue-note`   | Investigation brief for a GitHub issue with codebase scan           | Issue number/URL or infers from branch |
 
 ## Environment Variables
 
