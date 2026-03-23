@@ -1,6 +1,6 @@
 # hive-mind
 
-Obsidian vault integration for knowledge capture and search.
+A plugin built for agent interactions with the hive-mind knowledge system.
 
 ## Installation
 
