@@ -12,9 +12,9 @@ Each plugin can provide:
 
 ## Available Plugins
 
-| Plugin                          | Description                                                 |
-| ------------------------------- | ----------------------------------------------------------- |
-| [hive-mind](plugins/hive-mind/) | Obsidian vault integration for knowledge capture and search |
+| Plugin                          | Description                                                                |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| [hive-mind](plugins/hive-mind/) | A plugin built for agent interactions with the hive-mind knowledge system. |
 
 ## Installation
 
