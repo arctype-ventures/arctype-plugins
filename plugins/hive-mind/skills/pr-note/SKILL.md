@@ -1,8 +1,8 @@
 ---
 name: pr-note
-description: Create a structured Obsidian note documenting a pull request — what changed, why, and what decisions were made. Pulls data from GitHub via gh CLI.
+description: Create a hive-mind note for a pull request.
 argument-hint: "[optional: PR number or URL, e.g. '#42' or 'https://github.com/...']"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # PR Note Skill
@@ -147,7 +147,7 @@ time you generate a note — do not rely on a cached or hardcoded list.
 
 Generate the note as a markdown file with this structure:
 
-````markdown
+```markdown
 ---
 type: note
 title: "PR #<number>: <PR title>"
@@ -183,7 +183,7 @@ Wikilinks where applicable.>
 <Architectural or implementation choice made during this PR.
 Sourced from PR description, commit messages, or review comments.
 Include what was decided, why, and any alternatives considered.>
-````
+```
 
 Omit any section that has no content. Do not include empty sections.
 

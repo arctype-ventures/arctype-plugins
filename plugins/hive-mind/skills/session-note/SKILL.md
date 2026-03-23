@@ -1,8 +1,8 @@
 ---
 name: session-note
-description: Extract key insights from the current Claude Code session and write them as a structured Obsidian note. Use only when explicitly invoked by the user at the end of a meaningful session. Supports optional focus arguments to narrow extraction scope.
+description: Create a hive-mind note for an agent session.
 argument-hint: "[optional focus: e.g. 'the JWT auth decision', 'debugging the batch job']"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Session Note Skill

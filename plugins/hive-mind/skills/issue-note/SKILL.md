@@ -1,8 +1,8 @@
 ---
 name: issue-note
-description: Create a structured Obsidian note investigating a GitHub issue — pulls the issue from GitHub, scans the codebase for affected areas, and writes a summary-level investigation brief.
+description: Create a hive-mind note for a GitHub issue.
 argument-hint: "[issue number or URL, e.g. '#42' or 'https://github.com/...']"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Issue Note Skill
@@ -155,6 +155,7 @@ each file is relevant. Do not perform deep analysis. This feeds directly
 into the Affected Areas body section.
 
 Focus keyword extraction on:
+
 - Component or module names mentioned in the issue
 - Function or class names if referenced
 - Error messages or identifiers
@@ -164,7 +165,7 @@ Focus keyword extraction on:
 
 Generate the note as a markdown file with this structure:
 
-````markdown
+```markdown
 ---
 type: note
 title: "Issue #<number>: <issue title>"
@@ -200,7 +201,7 @@ A short bulleted list is acceptable here.>
 <Summary-level outline of what changes would likely be needed to resolve the
 issue. Keep this high-level — no implementation details, no code. 3-6 bullet
 points or a short paragraph.>
-````
+```
 
 Include only sections that have content. Do not include empty sections.
 No separate Context or Related Notes section — wikilinks are woven into
@@ -239,15 +240,15 @@ Examples:
 From the fetched issue data, identify every named entity that plausibly
 exists as its own vault note. Entity types by priority:
 
-| Priority    | Entity type                         | Examples                        | Always query?    |
-| ----------- | ----------------------------------- | ------------------------------- | ---------------- |
-| 1 (highest) | People / assignees                  | person names from issue         | Yes — never drop |
-| 1 (highest) | Repository                          | repo slug from step 5           | Yes — never drop |
-| 2           | Glossary terms / internal jargon    | component names, internal tools | Yes              |
-| 2           | Named tools / frameworks            | libraries, services referenced  | Yes              |
-| 3           | Key technical concepts from issue   | error types, feature names      | If distinctive   |
-| 3           | File/component names from scan      | modules found in step 7         | If distinctive   |
-| 4 (lowest)  | Generic terms                       | "bug", "error", "fix"           | Drop first       |
+| Priority    | Entity type                       | Examples                        | Always query?    |
+| ----------- | --------------------------------- | ------------------------------- | ---------------- |
+| 1 (highest) | People / assignees                | person names from issue         | Yes — never drop |
+| 1 (highest) | Repository                        | repo slug from step 5           | Yes — never drop |
+| 2           | Glossary terms / internal jargon  | component names, internal tools | Yes              |
+| 2           | Named tools / frameworks          | libraries, services referenced  | Yes              |
+| 3           | Key technical concepts from issue | error types, feature names      | If distinctive   |
+| 3           | File/component names from scan    | modules found in step 7         | If distinctive   |
+| 4 (lowest)  | Generic terms                     | "bug", "error", "fix"           | Drop first       |
 
 Soft ceiling: ~6 BM25 queries. If approaching the ceiling, drop priority 4
 and 3 entities first. Never drop a person or repo query.
@@ -298,12 +299,14 @@ No `qmd update` here — that runs in step 12 after the note is written.
 ### Building Linking Context
 
 From combined BM25 + semantic results, deduplicate by path and discard:
+
 - Results with BM25 score < 0.50
 - Semantic results >15% below the top semantic score
 - Structural files (CLAUDE.md, TAGS.md, FRONTMATTER.md, any `index.md`)
 - Template files
 
 For each remaining result, record:
+
 - Title, vault path (strip `qmd://vault/` prefix and `.md` extension)
 - Pre-formatted wikilink: `[[<vault-path>|<title>]]`
 - Tags (from the result metadata, or run `qmd get "<filepath>" -l 20`
@@ -322,6 +325,7 @@ flag it:
 > **Potential duplicate detected**: `[[path|Title]]` covers a similar topic.
 
 Present the warning to the user and ask whether to:
+
 1. Proceed with creating a new note
 2. Update the existing note instead
 3. Merge content from both
@@ -331,6 +335,7 @@ Do NOT silently create a duplicate.
 ### Using Context During Generation
 
 Carry the linking context into step 9. During note generation:
+
 - Insert `[[path|Title]]` wikilinks where the note's content naturally
   references a related note's topic. Link on first mention only.
 - When a glossary term is found (result has `type: term`), wikilink

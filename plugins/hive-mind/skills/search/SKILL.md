@@ -1,6 +1,6 @@
 ---
 name: search
-description: Search the Obsidian vault using qmd. Returns relevant notes, snippets, and file paths. Supports keyword and semantic search modes.
+description: Search the hive-mind vault.
 argument-hint: "<query> [--semantic] [--hybrid]"
 disable-model-invocation: false
 ---

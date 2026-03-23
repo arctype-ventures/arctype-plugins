@@ -1,8 +1,8 @@
 ---
 name: meeting
-description: Transform raw meeting notes into a structured Obsidian note with attendees, decisions, and action items. Creates stub person notes for new attendees. Supports raw text or AI transcript as input.
+description: Create a hive-mind note for a meeting.
 argument-hint: "<raw meeting notes or transcript>"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Meeting Note Skill

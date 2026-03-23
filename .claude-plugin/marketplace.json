@@ -1,0 +1,14 @@
+{
+  "name": "arctype-plugins",
+  "owner": {
+    "name": "Arctype Ventures"
+  },
+  "plugins": [
+    {
+      "name": "hive-mind",
+      "description": "A plugin built for agent interactions with the hive-mind knowledge system.",
+      "version": "0.1.0",
+      "source": "./plugins/hive-mind"
+    }
+  ]
+}

@@ -1,8 +1,0 @@
-{
-  "name": "hive-mind-plugin",
-  "description": "Hive Mind — Obsidian vault skills for structured note-taking, meeting capture, and knowledge search powered by qmd",
-  "version": "0.1.0",
-  "author": {
-    "name": "Justin Rudi"
-  }
-}
