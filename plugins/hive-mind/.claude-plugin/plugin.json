@@ -1,7 +1,6 @@
 {
   "name": "hive-mind",
   "description": "A plugin built for agent interactions with the hive-mind knowledge system.",
-  "version": "0.1.1",
   "author": {
     "name": "Arctype Ventures"
   }

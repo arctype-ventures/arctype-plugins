@@ -1,7 +1,6 @@
 {
   "name": "sf-utils",
   "description": "Base skills and rules for working in Salesforce DX projects.",
-  "version": "0.1.0",
   "author": {
     "name": "Arctype Ventures"
   }
