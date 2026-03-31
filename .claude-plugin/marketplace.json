@@ -7,7 +7,7 @@
     {
       "name": "hive-mind",
       "description": "A plugin built for agent interactions with the hive-mind knowledge system.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "./plugins/hive-mind"
     },
     {
