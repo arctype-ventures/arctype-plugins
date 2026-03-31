@@ -167,12 +167,16 @@ curl -s -b /tmp/slds.cookies \
   -d "id=$SG_ID" > /tmp/slds_pages.json
 ```
 
-**Step 2 — Identify the target page:**
+**Step 2 — Parse the URL to identify page and tab:**
 
-Extract the page ID slug from the URL path. URLs follow the pattern:
+SLDS URLs follow these patterns:
 
-- `/2e1ef8501/p/{pageId}-{name}` — page root
+- `/2e1ef8501/p/{pageId}-{name}` — page root (default/first tab only)
 - `/2e1ef8501/p/{pageId}-{name}/b/{tabUid}` — specific tab within a page
+
+Extract the page name from the URL slug (e.g., `93288f-typography` → `"Typography"`).
+
+**Extract the tab UID:** If the URL contains `/b/{tabUid}`, set `TAB_UID` to that value (e.g., `48e09b`). If there is no `/b/` segment, set `TAB_UID` to `"NONE"` — this renders only the first/default tab, not all tabs.
 
 Find the matching page in the JSON by name or ID.
 
@@ -355,11 +359,12 @@ if tabs:
         parts.append(f"\n## {tab.get('name', '')}\n")
         parts.append(convert_content(content, token_lookup, int_lookup))
     else:
-        # Render all tabs
-        for uid, tab in tabs.items():
-            content = tab.get("contentNode", {}).get("content", [])
-            parts.append(f"\n---\n## {tab.get('name', '')}\n")
-            parts.append(convert_content(content, token_lookup, int_lookup))
+        # Render only the first/default tab
+        first_uid = next(iter(tabs))
+        tab = tabs[first_uid]
+        content = tab.get("contentNode", {}).get("content", [])
+        parts.append(f"\n## {tab.get('name', '')}\n")
+        parts.append(convert_content(content, token_lookup, int_lookup))
 else:
     content = cn.get("content", [])
     parts.append(convert_content(content, token_lookup, int_lookup))
@@ -371,7 +376,7 @@ PYEOF
 **Usage notes:**
 
 - Replace `PAGE_NAME_HERE` with the page name (e.g., `Color`, `Avatar`)
-- Replace `TAB_UID_HERE_OR_NONE` with the tab UID from the URL `/b/{tabUid}`, or `NONE` to render all tabs
+- Replace `TAB_UID_HERE_OR_NONE` with the tab UID from the URL `/b/{tabUid}`, or `NONE` to render only the first/default tab
 - Set `TOKENS_FILE` to `""` if the page has no `tokensManagement` blocks
 - Set `INTEGRATION_FILE` to `""` if the page has no `markdown` blocks
 
