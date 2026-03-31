@@ -102,30 +102,6 @@ PROJECT=$(echo "$PRS_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
 The repo slug (from step 1) populates `repo:`. The extracted project name
 populates `project:`. There is no corresponding tag.
 
-## Frontmatter
-
-Frontmatter MUST be standardized to the format described in `$HIVE_MIND_PATH/FRONTMATTER.md`
-
-Declarative frontmatter example:
-
-```yaml
----
-type: note
-title: "PR #<number>: <PR title>"
-description: <1-2 sentence summary>
-tags:
-  - <domain-tag-1> # at least one required
-  - <domain-tag-2> # optional
-  - <domain-tag-3> # optional
-author: "<$HIVE_MIND_AUTHOR value>"
-repo: <repo-slug>
-project: <project-name>
-icon: LiGitPullRequest
-created: <YYYY-MM-DD>
-updated: <YYYY-MM-DD>
----
-```
-
 ## Valid Tags
 
 All tags MUST exist in `$HIVE_MIND_PATH/TAGS.md`. Read that file every
@@ -145,45 +121,18 @@ time you generate a note — do not rely on a cached or hardcoded list.
 
 ## Output Format
 
-Generate the note as a markdown file with this structure:
+Use the template from `$HIVE_MIND_PATH/templates/pr-note.md` as the structural
+starting point. Populate each section following these guidelines:
 
-```markdown
----
-type: note
-title: "PR #<number>: <PR title>"
-description: <1-2 sentence summary of what changed and why>
-tags:
-  - <domain-tag-1>
-  - <domain-tag-2 if applicable>
-author: "<$HIVE_MIND_AUTHOR value>"
-repo: <repo slug>
-project: <project name>
-icon: LiGitPullRequest
-created: <YYYY-MM-DD>
-updated: <YYYY-MM-DD>
----
-
-# PR #<number>: <PR title>
-
-## Summary
-
-<What was changed and why. Synthesized from PR description and commit messages.
-Wikilinks woven into prose where relevant. 2-5 sentences.>
-
-## Changes
-
-<Key files and areas affected, grouped logically — NOT a raw file list.
-Group by feature area, layer (frontend/backend/infra), or concern.
-Wikilinks where applicable.>
-
-## Decisions
-
-### <Decision title>
-
-<Architectural or implementation choice made during this PR.
-Sourced from PR description, commit messages, or review comments.
-Include what was decided, why, and any alternatives considered.>
-```
+- **Title**: `PR #<number>: <PR title>` — used in both frontmatter and as the H1
+- **Summary**: What was changed and why. Synthesized from PR description and
+  commit messages. Wikilinks woven into prose where relevant. 2-5 sentences.
+- **Changes**: Key files and areas affected, grouped logically — NOT a raw file
+  list. Group by feature area, layer (frontend/backend/infra), or concern.
+  Wikilinks where applicable.
+- **Decisions**: One H3 per decision. Architectural or implementation choices
+  made during this PR. Sourced from PR description, commit messages, or review
+  comments. Include what was decided, why, and any alternatives considered.
 
 Omit any section that has no content. Do not include empty sections.
 
@@ -219,8 +168,11 @@ Examples:
    `HIVE_MIND_AUTHOR` are set; `gh` is installed.
 2. Resolve the target PR from `$ARGUMENTS` or by inferring from the current
    branch via `gh pr view`.
-3. Read `$HIVE_MIND_PATH/TAGS.md` and `$HIVE_MIND_PATH/FRONTMATTER.md` to
-   load the current valid tag list and frontmatter conventions.
+3. Read `$HIVE_MIND_PATH/TAGS.md`, `$HIVE_MIND_PATH/FRONTMATTER.md`, and
+   `$HIVE_MIND_PATH/templates/pr-note.md` to load the current valid tag list,
+   frontmatter conventions, and the note template. Use the template as the
+   structural starting point for the generated note — it defines the
+   frontmatter fields and body sections.
 4. Extract PR data from GitHub via `gh pr view <number> --json title,body,files,commits,reviews,labels,state`.
 5. Determine repo slug from `pwd` and resolve the vault prs directory via
    `find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/prs" | head -1`.

@@ -86,30 +86,6 @@ PROJECT=$(echo "$ISSUES_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
 The repo slug (from step 1) populates `repo:`. The extracted project name
 populates `project:`. There is no corresponding tag.
 
-## Frontmatter
-
-Frontmatter MUST be standardized to the format described in `$HIVE_MIND_PATH/FRONTMATTER.md`
-
-Declarative frontmatter example:
-
-```yaml
----
-type: note
-title: "Issue #<number>: <issue title>"
-description: <1-2 sentence summary of the problem>
-tags:
-  - <domain-tag-1> # at least one required
-  - <domain-tag-2> # optional
-  - <domain-tag-3> # optional
-author: "<$HIVE_MIND_AUTHOR value>"
-repo: <repo-slug>
-project: <project-name>
-icon: LiCircleDot
-created: <YYYY-MM-DD>
-updated: <YYYY-MM-DD>
----
-```
-
 ## Valid Tags
 
 All tags MUST exist in `$HIVE_MIND_PATH/TAGS.md`. Read that file every
@@ -163,49 +139,24 @@ Focus keyword extraction on:
 
 ## Output Format
 
-Generate the note as a markdown file with this structure:
+Use the template from `$HIVE_MIND_PATH/templates/issue-note.md` as the structural
+starting point. Populate each section following these guidelines:
 
-```markdown
----
-type: note
-title: "Issue #<number>: <issue title>"
-description: <1-2 sentence summary of the problem>
-tags:
-  - <domain-tag-1>
-  - <domain-tag-2 if applicable>
-author: "<$HIVE_MIND_AUTHOR value>"
-repo: <repo-slug>
-project: <project-name>
-icon: LiCircleDot
-created: <YYYY-MM-DD>
-updated: <YYYY-MM-DD>
----
-
-# Issue #<number>: <issue title>
-
-## Problem
-
-<What the issue describes, in the developer's terms. This is a contextualized
-restatement — NOT a copy-paste of the GitHub body. Explain the impact and
-the expected vs. actual behavior. Wikilink to relevant glossary terms or
-related notes on first mention.>
-
-## Affected Areas
-
-<Files and components in the codebase likely involved, with brief reasoning.
-Sourced from the codebase scan. Use wikilinks to related notes where natural.
-A short bulleted list is acceptable here.>
-
-## Approach
-
-<Summary-level outline of what changes would likely be needed to resolve the
-issue. Keep this high-level — no implementation details, no code. 3-6 bullet
-points or a short paragraph.>
-```
+- **Title**: `Issue #<number>: <issue title>` — used in both frontmatter and as the H1
+- **Problem**: What the issue describes, in the developer's terms. This is a
+  contextualized restatement — NOT a copy-paste of the GitHub body. Explain the
+  impact and the expected vs. actual behavior. Wikilink to relevant glossary
+  terms or related notes on first mention.
+- **Affected Areas**: Files and components in the codebase likely involved, with
+  brief reasoning. Sourced from the codebase scan. Use wikilinks to related
+  notes where natural. A short bulleted list is acceptable here.
+- **Approach**: Summary-level outline of what changes would likely be needed to
+  resolve the issue. Keep this high-level — no implementation details, no code.
+  3-6 bullet points or a short paragraph.
 
 Include only sections that have content. Do not include empty sections.
 No separate Context or Related Notes section — wikilinks are woven into
-the prose of the three body sections above.
+the prose of the body sections above.
 
 ## File Naming
 
@@ -354,8 +305,11 @@ Carry the linking context into step 9. During note generation:
    `./setup.sh` if env vars are missing.
 2. Resolve the issue number from `$ARGUMENTS` or from the current branch name
    using the patterns defined in Issue Resolution.
-3. Read `$HIVE_MIND_PATH/TAGS.md` and `$HIVE_MIND_PATH/FRONTMATTER.md` from
-   the vault to get the current valid tag list and frontmatter conventions.
+3. Read `$HIVE_MIND_PATH/TAGS.md`, `$HIVE_MIND_PATH/FRONTMATTER.md`, and
+   `$HIVE_MIND_PATH/templates/issue-note.md` to load the current valid tag list,
+   frontmatter conventions, and the note template. Use the template as the
+   structural starting point for the generated note — it defines the
+   frontmatter fields and body sections.
 4. Fetch issue data from GitHub via:
    `gh issue view <number> --json title,body,labels,comments,assignees`
    If the issue is not found, abort with a clear message.

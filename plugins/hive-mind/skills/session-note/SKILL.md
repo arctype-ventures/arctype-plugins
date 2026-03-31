@@ -64,30 +64,6 @@ PROJECT=$(echo "$SESSIONS_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
 The repo slug (from step 1) populates `repo:`. The extracted project name
 populates `project:`. There is no corresponding tag.
 
-## Frontmatter
-
-Frontmatter MUST be standardized to the format described in `$HIVE_MIND_PATH/FRONTMATTER.md`
-
-Declaritive frontmatter example:
-
-```yaml
----
-type: note
-title: A short title for this note
-description: A short description of this note's context
-tags:
-  - <domain-tag-1> # at least one required
-  - <domain-tag-2> # optional
-  - <domain-tag-3> # optional
-author: "<$HIVE_MIND_AUTHOR value>"
-repo: <repo-name>
-project: <project-name>
-icon: LiFileText
-created: 2026-02-21
-updated: 2026-02-21
----
-```
-
 ## Valid Tags
 
 All tags MUST exist in `$HIVE_MIND_PATH/TAGS.md`. Read that file every
@@ -165,58 +141,18 @@ is worth remembering. Skip trivial typos and syntax errors.
 
 ## Output Format
 
-Generate the note as a markdown file with this structure:
+Use the template from `$HIVE_MIND_PATH/templates/session-note.md` as the
+structural starting point. Populate each section following these guidelines:
 
-````markdown
----
-type: note
-title: <Concise title summarizing the session focus>
-description: <1-2 sentence summary of what was accomplished>
-tags:
-  - <domain-tag-1>
-  - <domain-tag-2 if applicable>
-author: "<$HIVE_MIND_AUTHOR value>"
-repo: <repo slug or empty>
-project: <project name or empty>
-icon: LiFileText
-created: <YYYY-MM-DD>
-updated: <YYYY-MM-DD>
----
-
-# <Title>
-
-<Optional 2-3 sentence context paragraph. What was the session about at a
-high level? Only include if helpful for future discovery.>
-
-## Learnings
-
-- <Learning 1>
-- <Learning 2>
-
-## Decisions
-
-### <Decision title>
-
-<What, why, impact as described above.>
-
-## Code Patterns
-
-### <Pattern name>
-
-<Explanation of when to use this.>
-
-\```<language>
-<code>
-\```
-
-## Problems Solved
-
-### <Problem title>
-
-**Symptom**: <what was broken>
-**Root cause**: <why>
-**Fix**: <what resolved it>
-````
+- **Title**: Concise title summarizing the session focus
+- **Context paragraph** (optional): 2-3 sentences on what the session was about
+  at a high level. Only include if helpful for future discovery.
+- **Learnings**: Bulleted list of standalone, self-contained statements.
+- **Decisions**: One H3 per decision. Include what, why, and impact.
+- **Code Patterns**: One H3 per pattern. Include a short code block and a 1-2
+  sentence explanation of when to use it.
+- **Problems Solved**: One H3 per problem. Each with **Symptom**, **Root cause**,
+  and **Fix** fields.
 
 Omit any section that has no content. Do not include empty sections.
 
@@ -251,7 +187,10 @@ Examples:
 2. Determine repo slug from `pwd` (basename of working directory or git root).
 3. Resolve vault path from `$HIVE_MIND_PATH`. Find the repo's sessions directory
    using `find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/sessions" | head -1`.
-4. Read `$HIVE_MIND_PATH/TAGS.md` to get the current valid tag list.
+4. Read `$HIVE_MIND_PATH/TAGS.md` and `$HIVE_MIND_PATH/templates/session-note.md`
+   to get the current valid tag list and the note template. Use the template as
+   the structural starting point for the generated note — it defines the
+   frontmatter fields and body sections.
 5. Scan current session context for extractable content per the 4 categories.
 6. **Discover vault context for linking.** If `qmd` is not installed, skip
    this entire step — the note will be created without wikilinks, same as
