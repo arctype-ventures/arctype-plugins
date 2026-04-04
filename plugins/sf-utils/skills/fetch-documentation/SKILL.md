@@ -1,10 +1,10 @@
 ---
 name: fetch-documentation
-description: Fetch page content from any salesforce documentation site.
+description: "You MUST use this whenever you need to fetch a Salesforce documentation URL (developer.salesforce.com, lightningdesignsystem.com). Fetching normally returns irrelevant JS, not page content."
 disable-model-invocation: false
 ---
 
-## Fetching Salesforce Documentation
+# Fetching Salesforce Documentation
 
 ## Salesforce documentation pages use JavaScript rendering. Direct HTML fetching often returns incomplete content. Use the appropriate method based on URL pattern.
 

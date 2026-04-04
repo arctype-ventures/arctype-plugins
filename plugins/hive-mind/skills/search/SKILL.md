@@ -1,13 +1,13 @@
 ---
 name: search
-description: Search the hive-mind vault.
+description: "You MUST use this before planning, scoping, or any work that could benefit from prior decisions, context, or domain knowledge."
 argument-hint: "<query> [--semantic] [--hybrid]"
 disable-model-invocation: false
 ---
 
-# Vault Search Skill
+# Hive Mind Search Skill
 
-Search the user's Obsidian vault using qmd and return relevant results.
+Search the hive mind agent knowledge store using qmd and return relevant results.
 
 ## Prerequisites
 
@@ -26,6 +26,58 @@ If any prerequisite is missing, tell the user to run `./setup.sh` in the vault d
 Default is BM25 keyword search. Use `--semantic` when the query is
 conceptual or phrased as a question. Use `--hybrid` when precision matters.
 
+## Context-Aware Search (No Arguments or Vague Arguments)
+
+When you invoke this skill on your own — without specific user-provided search terms — do NOT guess at a query based on the user's intent (e.g., do NOT search `"project-name new feature scope"`). Those queries return irrelevant results because the vault contains highly specific notes, not generalized ones.
+
+Instead, use the **repo-context strategy**:
+
+### 1. Derive the repo name from `pwd`
+
+Extract the final directory component of the current working directory.
+
+```
+pwd = /Users/judi/code/trusted-services-lite
+  → repo_name = "trusted-services-lite"
+  → search_term = "trusted services lite"   (de-hyphenated for BM25)
+```
+
+### 2. Search by repo name
+
+```bash
+qmd search "<search_term>" --json -n 20 -c $HIVE_MIND_COLLECTION
+```
+
+The vault organizes repo-related notes in `repos/<repo-name>/` directories, and notes include `repos` frontmatter linking to their relevant repository. Searching by repo name surfaces recent sessions, decisions, and context for the project.
+
+### 3. Sort by recency
+
+From the results, prioritize notes with the most recent date in the title.
+
+### 4. Present as project context
+
+Frame the results as "project memories" rather than "search results":
+
+```
+Here's my recent memories for trusted-services-lite:
+
+1. **Session: Auth middleware refactor** (2026-03-28)
+2. **PR: Add rate limiting to API endpoints** (2026-03-25)
+```
+
+### When to use this strategy
+
+- The user says something general like "I want to scope a new feature" or "let's work on X"
+- You're self-invoking to gather context before planning or debugging
+- `$ARGUMENTS` is empty or contains only the user's intent (not a pointed search query)
+
+### When NOT to use this strategy
+
+- The user passes specific search terms: `/hive-mind:search JWT auth strategy`
+- The user asks to find something specific: "search for notes about rate limiting"
+
+In those cases, use the arguments directly as the query (see Argument Parsing below).
+
 ## Argument Parsing
 
 The query is everything in `$ARGUMENTS` after stripping any flags.
@@ -42,17 +94,7 @@ $ARGUMENTS = "how to handle session tokens"
 
 ## Search Execution
 
-### 1. Run an incremental index update first
-
-```bash
-qmd update 2>/dev/null
-```
-
-This is fast (file scan only, no embedding) and ensures recently written
-notes are searchable. Do NOT run `qmd embed` — that is slow and handled
-by a scheduled job.
-
-### 2. Execute the search
+### 1. Execute the search
 
 **Keyword (default)**:
 
@@ -72,7 +114,7 @@ qmd vsearch "<query>" --json -n 10 -c $HIVE_MIND_COLLECTION
 qmd query "<query>" --json -n 10 -c $HIVE_MIND_COLLECTION
 ```
 
-### 3. Parse and present results
+### 2. Parse and present results
 
 From the JSON output, extract for each result:
 
@@ -84,18 +126,13 @@ From the JSON output, extract for each result:
 Present results as a concise list:
 
 ```
-Found 5 results for "JWT authentication":
+My memories for "JWT authentication":
 
 1. **ECA vs Session-Based Auth** (87%)
-   repos/trusted-services-lite/2026-02-21-session-eca-vs-session-auth.md
-   "...Salesforce Connected Apps support JWT Bearer Flow without user interaction..."
-
 2. **Setting Up qmd with Bun** (52%)
-   domains/obsidian/2026-02-21-session-qmd-bun-setup.md
-   "...JWT auth strategy session notes..."
 ```
 
-### 4. Offer follow-up actions
+### 3. Offer follow-up actions
 
 After presenting results, offer:
 
@@ -108,7 +145,7 @@ To read a note, use:
 qmd get "<filepath>" --full
 ```
 
-## Search Tips (for the agent)
+## Search Tips
 
 - BM25 tokenizes on hyphens — search `sqlite vec` not `sqlite-vec`
 - BM25 is best for exact terms, file names, and specific identifiers
@@ -118,6 +155,5 @@ qmd get "<filepath>" --full
 
 ## Error Handling
 
-- If `qmd` is not found: tell user to install it (`npm install -g @tobilu/qmd`)
-- If no collection exists: tell user to run `qmd collection add $HIVE_MIND_PATH --name $HIVE_MIND_COLLECTION`
+- If any of the above items error, stop immediately and flag to user
 - If no results: suggest trying a different search mode or broader terms
