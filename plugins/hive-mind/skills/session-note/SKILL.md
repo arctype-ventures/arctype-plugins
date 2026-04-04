@@ -1,6 +1,6 @@
 ---
 name: session-note
-description: Create a hive-mind note for an agent session.
+description: "You MUST invoke this (or ask the user) whenever an architecture decision is made, a non-obvious bug is diagnosed, a reusable code pattern emerges, or something surprising is learned about the repo, tooling, or developer workflow."
 argument-hint: "[optional focus: e.g. 'the JWT auth decision', 'debugging the batch job']"
 disable-model-invocation: false
 ---
@@ -8,7 +8,7 @@ disable-model-invocation: false
 # Session Note Skill
 
 Extract insights from the current Claude Code session and write a structured
-note to the user's Obsidian vault.
+note to hive mind knowledge base.
 
 ## Vault Location
 
@@ -16,7 +16,7 @@ The vault path is defined by the `HIVE_MIND_PATH` environment variable.
 The qmd collection name is defined by `HIVE_MIND_COLLECTION` (default: `hive-mind`).
 The note author is defined by `HIVE_MIND_AUTHOR` (a wikilink to a `people/` entry).
 
-If `HIVE_MIND_PATH` is unset, abort and tell the user to run `./setup.sh` in the vault directory.
+If any of the vars are unset, abort and flag to the user.
 
 ## Invocation Modes
 
