@@ -65,25 +65,26 @@ transform it.
 
 ### 2. Find the matching vault directory
 
-Search for the issues directory for the repo slug anywhere under `$HIVE_MIND_PATH/projects`:
+Look for the issues directory for the repo slug under `$HIVE_MIND_PATH/repos`:
 
 ```bash
-find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/issues" | head -1
+ISSUES_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/issues"
 ```
 
-- If exactly one match: use that path as the target directory (`$ISSUES_DIR`).
-- If multiple matches: present them to the user and ask which to use.
-- If no match: flag to the user and do not proceed with writing the note.
+- If the directory exists: use it as the target directory (`$ISSUES_DIR`).
+- If it does not exist: flag to the user and do not proceed with writing the note.
 
 ### 3. Derive project name
 
-Extract the project name from the resolved issues path:
+Look up the project name from the repo-to-project mapping table in `$HIVE_MIND_PATH/PROJECTS.md`:
 
 ```bash
-PROJECT=$(echo "$ISSUES_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
+PROJECT=$(grep -E "^\| *<repo-slug> " "$HIVE_MIND_PATH/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
 ```
 
-The repo slug (from step 1) populates `repo:`. The extracted project name
+If no match is found, leave the `project:` field empty and flag to the user.
+
+The repo slug (from step 1) populates `repo:`. The looked-up project name
 populates `project:`. There is no corresponding tag.
 
 ## Valid Tags
@@ -314,8 +315,8 @@ Carry the linking context into step 9. During note generation:
    `gh issue view <number> --json title,body,labels,comments,assignees`
    If the issue is not found, abort with a clear message.
 5. Determine repo slug from `pwd` (basename of working directory or git root).
-6. Resolve vault directory using `find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/issues" | head -1`.
-   Extract project name from the resolved path.
+6. Resolve vault directory by checking `$HIVE_MIND_PATH/repos/<repo-slug>/issues` exists.
+   Look up the project name from `$HIVE_MIND_PATH/PROJECTS.md`.
 7. Lightweight codebase scan — extract keywords from the issue title and body,
    then grep the local repo for affected files. Collect paths and brief
    context. Keep this shallow.

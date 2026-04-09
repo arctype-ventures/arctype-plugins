@@ -7,6 +7,7 @@ Base skills and rules for working in Salesforce DX projects.
 | Skill                | Purpose                                              | Input          |
 | -------------------- | ---------------------------------------------------- | -------------- |
 | `fetch-documentation` | Fetch content from any Salesforce documentation site | Documentation URL |
+| `sf-playwright`       | Authenticate Playwright with the current SF org and navigate to a page | Lightning path (optional) |
 
 ## Rules
 
