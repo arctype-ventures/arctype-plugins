@@ -81,25 +81,26 @@ transform it.
 
 ### 2. Find the matching vault directory
 
-Search for the prs directory for the repo slug anywhere under `$HIVE_MIND_PATH/projects`:
+Look for the prs directory for the repo slug under `$HIVE_MIND_PATH/repos`:
 
 ```bash
-find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/prs" | head -1
+PRS_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/prs"
 ```
 
-- If exactly one match: use that path as the target directory (`$PRS_DIR`).
-- If multiple matches: present them to the user and ask which to use.
-- If no match: flag to the user and do not proceed with writing the note.
+- If the directory exists: use it as the target directory (`$PRS_DIR`).
+- If it does not exist: flag to the user and do not proceed with writing the note.
 
 ### 3. Derive project name
 
-Extract the project name from the resolved prs path:
+Look up the project name from the repo-to-project mapping table in `$HIVE_MIND_PATH/PROJECTS.md`:
 
 ```bash
-PROJECT=$(echo "$PRS_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
+PROJECT=$(grep -E "^\| *<repo-slug> " "$HIVE_MIND_PATH/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
 ```
 
-The repo slug (from step 1) populates `repo:`. The extracted project name
+If no match is found, leave the `project:` field empty and flag to the user.
+
+The repo slug (from step 1) populates `repo:`. The looked-up project name
 populates `project:`. There is no corresponding tag.
 
 ## Valid Tags
@@ -175,7 +176,8 @@ Examples:
    frontmatter fields and body sections.
 4. Extract PR data from GitHub via `gh pr view <number> --json title,body,files,commits,reviews,labels,state`.
 5. Determine repo slug from `pwd` and resolve the vault prs directory via
-   `find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/prs" | head -1`.
+   checking `$HIVE_MIND_PATH/repos/<repo-slug>/prs` exists.
+   Look up the project name from `$HIVE_MIND_PATH/PROJECTS.md`.
 6. Extract the project name from the resolved path.
 7. **Discover vault context for linking.** If `qmd` is not installed, skip
    this entire step — the note will be created without wikilinks. Otherwise,

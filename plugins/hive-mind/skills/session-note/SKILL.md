@@ -43,25 +43,26 @@ transform it.
 
 ### 2. Find the matching vault directory
 
-Search for the sessions directory for the repo slug anywhere under `$HIVE_MIND_PATH/projects`:
+Look for the sessions directory for the repo slug under `$HIVE_MIND_PATH/repos`:
 
 ```bash
-find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/sessions" | head -1
+SESSIONS_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/sessions"
 ```
 
-- If exactly one match: use that path as the target directory (`$SESSIONS_DIR`).
-- If multiple matches: present them to the user and ask which to use.
-- If no match: flag to the user and do not proceed with writing the note.
+- If the directory exists: use it as the target directory (`$SESSIONS_DIR`).
+- If it does not exist: flag to the user and do not proceed with writing the note.
 
 ### 3. Derive project name
 
-Extract the project name from the resolved sessions path:
+Look up the project name from the repo-to-project mapping table in `$HIVE_MIND_PATH/PROJECTS.md`:
 
 ```bash
-PROJECT=$(echo "$SESSIONS_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
+PROJECT=$(grep -E "^\| *<repo-slug> " "$HIVE_MIND_PATH/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
 ```
 
-The repo slug (from step 1) populates `repo:`. The extracted project name
+If no match is found, leave the `project:` field empty and flag to the user.
+
+The repo slug (from step 1) populates `repo:`. The looked-up project name
 populates `project:`. There is no corresponding tag.
 
 ## Valid Tags
@@ -186,7 +187,8 @@ Examples:
 1. Read `$ARGUMENTS` to determine mode (full vs focused).
 2. Determine repo slug from `pwd` (basename of working directory or git root).
 3. Resolve vault path from `$HIVE_MIND_PATH`. Find the repo's sessions directory
-   using `find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/sessions" | head -1`.
+   by checking `$HIVE_MIND_PATH/repos/<repo-slug>/sessions` exists.
+   Look up the project name from `$HIVE_MIND_PATH/PROJECTS.md`.
 4. Read `$HIVE_MIND_PATH/TAGS.md` and `$HIVE_MIND_PATH/templates/session-note.md`
    to get the current valid tag list and the note template. Use the template as
    the structural starting point for the generated note — it defines the

@@ -461,18 +461,17 @@ being captured from within a repo directory. Use the name exactly as-is.
 ### 2. Find the matching vault directory
 
 ```bash
-find "$HIVE_MIND_PATH/projects" -type d -path "*/repos/<repo-slug>/sessions" | head -1
+SESSIONS_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/sessions"
 ```
 
-Extract the project name from the matched path:
+Look up the project name from the repo-to-project mapping table in `$HIVE_MIND_PATH/PROJECTS.md`:
 
 ```bash
-PROJECT=$(echo "$SESSIONS_DIR" | sed 's|.*/projects/||' | cut -d'/' -f1)
+PROJECT=$(grep -E "^\| *<repo-slug> " "$HIVE_MIND_PATH/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
 ```
 
-- If exactly one match: use that path and set `PROJECT` from the extracted value.
-- If multiple matches: present them to the user and ask which to use.
-- If no match: default `PROJECT` to `arctype` and proceed without a repo association.
+- If the directory exists and a project match is found: use that path and set `PROJECT`.
+- If the directory does not exist or no project match is found: default `PROJECT` to `arctype` and proceed without a repo association.
 
 Meeting notes must always have `project` set — never leave it blank.
 

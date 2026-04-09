@@ -7,13 +7,13 @@
     {
       "name": "hive-mind",
       "description": "A plugin built for agent interactions with the hive-mind knowledge system.",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "source": "./plugins/hive-mind"
     },
     {
       "name": "sf-utils",
       "description": "Base skills and rules for working in Salesforce DX projects.",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "source": "./plugins/sf-utils"
     }
   ]
