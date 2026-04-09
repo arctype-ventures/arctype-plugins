@@ -62,8 +62,14 @@ PROJECT=$(grep -E "^\| *<repo-slug> " "$HIVE_MIND_PATH/PROJECTS.md" | sed 's/.*|
 
 If no match is found, leave the `project:` field empty and flag to the user.
 
-The repo slug (from step 1) populates `repo:`. The looked-up project name
-populates `project:`. There is no corresponding tag.
+The repo slug (from step 1) is used to build a wikilink for `repo:`:
+
+```yaml
+repo: "[[repos/<repo-slug>/<repo-slug>|<repo-slug>]]"
+```
+
+The looked-up project name populates `project:` as a plain string.
+There is no corresponding tag for either field.
 
 ## Valid Tags
 
@@ -72,7 +78,7 @@ time you generate a note — do not rely on a cached or hardcoded list.
 
 ### Tag Rules
 
-- Include 1-3 domain tags that describe the technical subject matter.
+- Include 1-5 domain tags that describe the technical subject matter.
 - If a tag you need is not in TAGS.md, apply the three-check protocol
   defined in the "Adding New Tags" section of TAGS.md:
   1. No existing tag covers the concept (check for synonyms/broader tags)

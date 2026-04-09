@@ -258,7 +258,10 @@ aliases:
 author: "<$HIVE_MIND_AUTHOR value>"
 company: <company if inferrable from meeting context>
 role: <role if inferrable from meeting context>
-project: <project name if associated with a specific project>
+projects:
+  - <project name if associated with a specific project>
+repos:
+  - <repo slug if associated with a specific repo>
 icon: LiUser
 created: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
@@ -288,8 +291,10 @@ SORT file.cday DESC
 - If not inferrable, leave `company` and `role` empty (no value)
 - Always include at least the first name as an alias
 - Description falls back to just the full name if role/company unknown
-- **Associate people with their project** using the `project:` frontmatter
-  field on person stubs when they are a contact for a specific project.
+- **Associate people with projects/repos** using the `projects` and `repos`
+  array fields. `projects` captures the umbrella project name; `repos` narrows
+  to specific repos when the person doesn't span the whole project. If someone
+  works across all repos in a project, only `projects` is needed.
 - Report all created stubs to the user in the final summary
 
 ### 7. Generate structured meeting note
@@ -309,7 +314,7 @@ attendees:
   - "[[people/person-name|Display Name]]"
 author: "<$HIVE_MIND_AUTHOR value>"
 meeting-type: <inferred type>
-repo: <repo slug if applicable>
+repo: "[[repos/<repo-slug>/<repo-slug>|<repo-slug>]]"  # if applicable
 project: <project name — always required; use arctype for cross-cutting meetings>
 icon: LiUsers
 created: <YYYY-MM-DD>
@@ -477,6 +482,6 @@ Meeting notes must always have `project` set — never leave it blank.
 
 ### 3. If a repo is matched
 
-- Set the `repo:` frontmatter field
-- Set the `project:` frontmatter field to the extracted `$PROJECT` value
-- Link to the project's index if discovered via search
+- Set the `repo:` frontmatter field as a wikilink: `repo: "[[repos/<slug>/<slug>|<slug>]]"`
+- Set the `project:` frontmatter field to the extracted `$PROJECT` value as a plain string
+- Link to the repo's hub note if discovered via search
