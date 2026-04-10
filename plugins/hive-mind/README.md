@@ -20,19 +20,14 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 
 ## Configuration
 
-Environment variables used in the plugin skills are configured via the `setup.sh` script in the [hive-mind vault repository](https://github.com/arctype-ventures/hive-mind).
+When you enable the plugin, Claude Code prompts for two values:
 
-The script adds the following to your Claude settings:
+- **vault_path** — Absolute path to your hive-mind Obsidian vault
+- **author_name** — Your display name as it appears in `people/` notes (e.g., "Jane Smith")
 
-```json
-{
-  "env": {
-    "HIVE_MIND_PATH": "/path/to/your/vault",
-    "HIVE_MIND_COLLECTION": "hive-mind",
-    "HIVE_MIND_AUTHOR": "[[people/your-name|Your Name]]"
-  }
-}
-```
+To reconfigure later, run `/plugins`, select hive-mind, and choose "Configure Options".
+
+You also need to run `setup.sh` in the [hive-mind vault repository](https://github.com/arctype-ventures/hive-mind) to set up the qmd search index and directory contexts.
 
 ## Prerequisites
 

@@ -3,5 +3,15 @@
   "description": "A plugin built for agent interactions with the hive-mind knowledge system.",
   "author": {
     "name": "Arctype Ventures"
+  },
+  "userConfig": {
+    "vault_path": {
+      "description": "Absolute path to your hive-mind Obsidian vault (e.g. /Users/you/code/hive-mind)",
+      "sensitive": false
+    },
+    "author_name": {
+      "description": "Your display name as it appears in people/ notes (e.g. Jane Smith)",
+      "sensitive": false
+    }
   }
 }

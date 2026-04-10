@@ -12,11 +12,21 @@ Create stub person notes for unknown attendees.
 
 ## Vault Location
 
-The vault path is defined by the `HIVE_MIND_PATH` environment variable.
-The qmd collection name is defined by `HIVE_MIND_COLLECTION` (default: `hive-mind`).
-The note author is defined by `HIVE_MIND_AUTHOR` (a wikilink to a `people/` entry).
+The vault root is `${user_config.vault_path}`.
+The qmd collection is `hive-mind`.
+The author display name is `${user_config.author_name}`.
 
-If `HIVE_MIND_PATH` is unset, abort and tell the user to run `./setup.sh` in the vault directory.
+### Author Resolution
+
+Derive the author wikilink from the configured name:
+
+1. Kebab-case the author name (e.g., "Jane Smith" → `jane-smith`)
+2. Construct the wikilink: `[[people/<slug>|<name>]]`
+3. Verify `${user_config.vault_path}/people/<slug>.md` exists
+4. If it does not exist, abort and tell the user to create their person note first
+
+If `${user_config.vault_path}` is empty or the directory does not exist, abort
+and tell the user to configure the plugin via `/plugins` → hive-mind → Configure Options.
 
 ## Invocation
 
@@ -36,14 +46,14 @@ Raw notes can be:
 
 ### 1. Validate prerequisites
 
-- Check `$HIVE_MIND_PATH` is set. If not, abort with setup instructions.
-- Check `$HIVE_MIND_COLLECTION` is set. If not, abort with setup instructions.
-- Check `$HIVE_MIND_AUTHOR` is set. If not, abort with setup instructions.
+- Check `${user_config.vault_path}` is configured and the directory exists. If not, abort and tell the user to configure the plugin via `/plugins` → hive-mind → Configure Options.
+- Check `${user_config.author_name}` is configured. If not, abort with the same message.
+- Resolve the author wikilink per Author Resolution above.
 - Check `$ARGUMENTS` is non-empty. If empty, abort with usage hint.
 
 ### 2. Read vault config
 
-Read the following files from `$HIVE_MIND_PATH`:
+Read the following files from `${user_config.vault_path}`:
 
 - `TAGS.md` — current valid tag list
 - `FRONTMATTER.md` — frontmatter schema
@@ -51,7 +61,7 @@ Read the following files from `$HIVE_MIND_PATH`:
 Also list existing glossary terms for unfamiliar term resolution:
 
 ```bash
-ls $HIVE_MIND_PATH/glossary/*.md 2>/dev/null
+ls ${user_config.vault_path}/glossary/*.md 2>/dev/null
 ```
 
 Do NOT rely on cached or hardcoded versions. Read fresh every invocation.
@@ -86,7 +96,7 @@ For each unfamiliar term, run a quick BM25 search to check if the vault
 has context:
 
 ```bash
-qmd search "<de-hyphenated term>" --json -n 3 -c $HIVE_MIND_COLLECTION
+qmd search "<de-hyphenated term>" --json -n 3 -c hive-mind
 ```
 
 Do NOT run semantic search for this — keep it fast.
@@ -168,13 +178,13 @@ entities first. **Never drop a person or repo query.**
 **BM25 (per entity):**
 
 ```bash
-qmd search "<de-hyphenated entity>" --json -n 5 -c $HIVE_MIND_COLLECTION
+qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind
 ```
 
 **Semantic (one pass for overall topic):**
 
 ```bash
-qmd vsearch "<conceptual description of the meeting>" --json -n 5 -c $HIVE_MIND_COLLECTION
+qmd vsearch "<conceptual description of the meeting>" --json -n 5 -c hive-mind
 ```
 
 The semantic query should be a 5–15 word natural language description.
@@ -218,13 +228,13 @@ For each attendee identified in step 3:
 1. Search the vault for an existing person note:
 
    ```bash
-   qmd search "<attendee name>" --json -n 3 -c $HIVE_MIND_COLLECTION
+   qmd search "<attendee name>" --json -n 3 -c hive-mind
    ```
 
    Also check `people/` directory directly:
 
    ```bash
-   ls $HIVE_MIND_PATH/people/*.md 2>/dev/null
+   ls ${user_config.vault_path}/people/*.md 2>/dev/null
    ```
 
 2. **If found**: Record the wikilink path (e.g., `[[people/jane-smith|Jane Smith]]`)
@@ -234,7 +244,7 @@ For each attendee identified in step 3:
 If `qmd` is not installed, fall back to filename matching in `people/`:
 
 ```bash
-ls $HIVE_MIND_PATH/people/ 2>/dev/null
+ls ${user_config.vault_path}/people/ 2>/dev/null
 ```
 
 ### 6. Create stub person notes
@@ -255,7 +265,7 @@ tags: []
 aliases:
   - <First Name>
   - <Full Name>
-author: "<$HIVE_MIND_AUTHOR value>"
+author: "<resolved author wikilink>"
 company: <company if inferrable from meeting context>
 role: <role if inferrable from meeting context>
 projects:
@@ -312,7 +322,7 @@ tags:
   - <domain-tags>
 attendees:
   - "[[people/person-name|Display Name]]"
-author: "<$HIVE_MIND_AUTHOR value>"
+author: "<resolved author wikilink>"
 meeting-type: <inferred type>
 repo: "[[repos/<repo-slug>/<repo-slug>|<repo-slug>]]"  # if applicable
 project: <project name — always required; use arctype for cross-cutting meetings>
@@ -370,7 +380,7 @@ Anything else noteworthy that doesn't fit the above sections.
 
 ### 8. Validate tags
 
-All tags in frontmatter MUST exist in `$HIVE_MIND_PATH/TAGS.md`.
+All tags in frontmatter MUST exist in `${user_config.vault_path}/TAGS.md`.
 
 For any tag that doesn't exist, apply the three-check protocol from
 TAGS.md:
@@ -397,7 +407,7 @@ Examples:
 - `2026-02-23-darksail-auth-review.md`
 - `2026-02-23-client-kickoff-raiquun.md`
 
-**Target directory**: `$HIVE_MIND_PATH/meetings/`
+**Target directory**: `${user_config.vault_path}/meetings/`
 
 ### 10. Update search index
 
@@ -466,13 +476,13 @@ being captured from within a repo directory. Use the name exactly as-is.
 ### 2. Find the matching vault directory
 
 ```bash
-SESSIONS_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/sessions"
+SESSIONS_DIR="${user_config.vault_path}/repos/<repo-slug>/sessions"
 ```
 
-Look up the project name from the repo-to-project mapping table in `$HIVE_MIND_PATH/PROJECTS.md`:
+Look up the project name from the repo-to-project mapping table in `${user_config.vault_path}/PROJECTS.md`:
 
 ```bash
-PROJECT=$(grep -E "^\| *<repo-slug> " "$HIVE_MIND_PATH/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
+PROJECT=$(grep -E "^\| *<repo-slug> " "${user_config.vault_path}/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
 ```
 
 - If the directory exists and a project match is found: use that path and set `PROJECT`.

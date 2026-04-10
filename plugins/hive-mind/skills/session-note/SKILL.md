@@ -12,11 +12,21 @@ note to hive mind knowledge base.
 
 ## Vault Location
 
-The vault path is defined by the `HIVE_MIND_PATH` environment variable.
-The qmd collection name is defined by `HIVE_MIND_COLLECTION` (default: `hive-mind`).
-The note author is defined by `HIVE_MIND_AUTHOR` (a wikilink to a `people/` entry).
+The vault root is `${user_config.vault_path}`.
+The qmd collection is `hive-mind`.
+The author display name is `${user_config.author_name}`.
 
-If any of the vars are unset, abort and flag to the user.
+### Author Resolution
+
+Derive the author wikilink from the configured name:
+
+1. Kebab-case the author name (e.g., "Jane Smith" → `jane-smith`)
+2. Construct the wikilink: `[[people/<slug>|<name>]]`
+3. Verify `${user_config.vault_path}/people/<slug>.md` exists
+4. If it does not exist, abort and tell the user to create their person note first
+
+If `${user_config.vault_path}` is empty or the directory does not exist, abort
+and tell the user to configure the plugin via `/plugins` → hive-mind → Configure Options.
 
 ## Invocation Modes
 
@@ -43,10 +53,10 @@ transform it.
 
 ### 2. Find the matching vault directory
 
-Look for the sessions directory for the repo slug under `$HIVE_MIND_PATH/repos`:
+Look for the sessions directory for the repo slug under `${user_config.vault_path}/repos`:
 
 ```bash
-SESSIONS_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/sessions"
+SESSIONS_DIR="${user_config.vault_path}/repos/<repo-slug>/sessions"
 ```
 
 - If the directory exists: use it as the target directory (`$SESSIONS_DIR`).
@@ -54,10 +64,10 @@ SESSIONS_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/sessions"
 
 ### 3. Derive project name
 
-Look up the project name from the repo-to-project mapping table in `$HIVE_MIND_PATH/PROJECTS.md`:
+Look up the project name from the repo-to-project mapping table in `${user_config.vault_path}/PROJECTS.md`:
 
 ```bash
-PROJECT=$(grep -E "^\| *<repo-slug> " "$HIVE_MIND_PATH/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
+PROJECT=$(grep -E "^\| *<repo-slug> " "${user_config.vault_path}/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
 ```
 
 If no match is found, leave the `project:` field empty and flag to the user.
@@ -73,7 +83,7 @@ There is no corresponding tag for either field.
 
 ## Valid Tags
 
-All tags MUST exist in `$HIVE_MIND_PATH/TAGS.md`. Read that file every
+All tags MUST exist in `${user_config.vault_path}/TAGS.md`. Read that file every
 time you generate a note — do not rely on a cached or hardcoded list.
 
 ### Tag Rules
@@ -148,7 +158,7 @@ is worth remembering. Skip trivial typos and syntax errors.
 
 ## Output Format
 
-Use the template from `$HIVE_MIND_PATH/templates/session-note.md` as the
+Use the template from `${user_config.vault_path}/templates/session-note.md` as the
 structural starting point. Populate each section following these guidelines:
 
 - **Title**: Concise title summarizing the session focus
@@ -192,10 +202,10 @@ Examples:
 
 1. Read `$ARGUMENTS` to determine mode (full vs focused).
 2. Determine repo slug from `pwd` (basename of working directory or git root).
-3. Resolve vault path from `$HIVE_MIND_PATH`. Find the repo's sessions directory
-   by checking `$HIVE_MIND_PATH/repos/<repo-slug>/sessions` exists.
-   Look up the project name from `$HIVE_MIND_PATH/PROJECTS.md`.
-4. Read `$HIVE_MIND_PATH/TAGS.md` and `$HIVE_MIND_PATH/templates/session-note.md`
+3. Resolve vault path from `${user_config.vault_path}`. Find the repo's sessions directory
+   by checking `${user_config.vault_path}/repos/<repo-slug>/sessions` exists.
+   Look up the project name from `${user_config.vault_path}/PROJECTS.md`.
+4. Read `${user_config.vault_path}/TAGS.md` and `${user_config.vault_path}/templates/session-note.md`
    to get the current valid tag list and the note template. Use the template as
    the structural starting point for the generated note — it defines the
    frontmatter fields and body sections.
@@ -250,14 +260,14 @@ Examples:
    **BM25 (per entity)** — One query per named entity from 6a:
 
    ```bash
-   qmd search "<de-hyphenated entity>" --json -n 5 -c $HIVE_MIND_COLLECTION
+   qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind
    ```
 
    **Semantic (one pass for primary topic)** — One `vsearch` query for
    the note's overall topic, phrased as a natural language concept:
 
    ```bash
-   qmd vsearch "<conceptual description of the note's topic>" --json -n 5 -c $HIVE_MIND_COLLECTION
+   qmd vsearch "<conceptual description of the note's topic>" --json -n 5 -c hive-mind
    ```
 
    The semantic query should be a 5–15 word natural language description,
@@ -317,7 +327,7 @@ Examples:
    context from step 6 to insert `[[wikilinks]]` to related vault notes
    where the content naturally references their topics. Link on first
    mention only; do not add a separate "Related Notes" section.
-8. Validate that ALL tags in frontmatter exist in `$HIVE_MIND_PATH/TAGS.md`.
+8. Validate that ALL tags in frontmatter exist in `${user_config.vault_path}/TAGS.md`.
    For any tag that doesn't exist, apply the three-check protocol from
    TAGS.md. If it passes, add the tag to TAGS.md and keep it. If it fails,
    replace it with the closest broader existing tag. Cross-reference domain

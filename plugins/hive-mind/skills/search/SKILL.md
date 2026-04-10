@@ -12,10 +12,10 @@ Search the hive mind agent knowledge store using qmd and return relevant results
 ## Prerequisites
 
 - `qmd` must be installed and on `$PATH`
-- `$HIVE_MIND_PATH` environment variable must be set (path to vault root)
-- `$HIVE_MIND_COLLECTION` must name the qmd collection (default: `hive-mind`)
+- `${user_config.vault_path}` must be configured (path to vault root)
 
-If any prerequisite is missing, tell the user to run `./setup.sh` in the vault directory.
+If `${user_config.vault_path}` is empty or the directory does not exist, abort
+and tell the user to configure the plugin via `/plugins` → hive-mind → Configure Options.
 
 ## Invocation
 
@@ -45,7 +45,7 @@ pwd = /Users/judi/code/trusted-services-lite
 ### 2. Search by repo name
 
 ```bash
-qmd search "<search_term>" --json -n 20 -c $HIVE_MIND_COLLECTION
+qmd search "<search_term>" --json -n 20 -c hive-mind
 ```
 
 The vault organizes repo-related notes in `repos/<repo-name>/` directories, and notes include `repos` frontmatter linking to their relevant repository. Searching by repo name surfaces recent sessions, decisions, and context for the project.
@@ -99,19 +99,19 @@ $ARGUMENTS = "how to handle session tokens"
 **Keyword (default)**:
 
 ```bash
-qmd search "<query>" --json -n 10 -c $HIVE_MIND_COLLECTION
+qmd search "<query>" --json -n 10 -c hive-mind
 ```
 
 **Semantic** (`--semantic`):
 
 ```bash
-qmd vsearch "<query>" --json -n 10 -c $HIVE_MIND_COLLECTION
+qmd vsearch "<query>" --json -n 10 -c hive-mind
 ```
 
 **Hybrid** (`--hybrid`):
 
 ```bash
-qmd query "<query>" --json -n 10 -c $HIVE_MIND_COLLECTION
+qmd query "<query>" --json -n 10 -c hive-mind
 ```
 
 ### 2. Parse and present results

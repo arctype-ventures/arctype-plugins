@@ -12,13 +12,15 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 | `pr-note`      | Document a PR — what changed, why, decisions made                   | PR number/URL or infers from branch    |
 | `issue-note`   | Investigation brief for a GitHub issue with codebase scan           | Issue number/URL or infers from branch |
 
-## Environment Variables
+## Plugin Configuration
 
-All skills depend on these (the [hive-mind vault repository's](https://github.com/arctype-ventures/hive-mind) `setup.sh` script):
+All skills depend on two user-configured values, prompted when the plugin is enabled:
 
-- `HIVE_MIND_PATH` — Absolute path to the Obsidian vault root
-- `HIVE_MIND_COLLECTION` — qmd collection name (default: `hive-mind`)
-- `HIVE_MIND_AUTHOR` — Wikilink to the author's person note (e.g., `[[people/jane-smith|Jane Smith]]`)
+- `vault_path` — Absolute path to the Obsidian vault root
+- `author_name` — Display name matching a `people/` note (e.g., "Jane Smith")
+
+The qmd collection name `hive-mind` is hardcoded. Author wikilinks are derived
+at runtime by kebab-casing the author name and resolving the person file.
 
 ## Cross-Skill Conventions
 
