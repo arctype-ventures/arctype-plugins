@@ -12,11 +12,21 @@ a structured investigation brief to the user's Obsidian vault.
 
 ## Vault Location
 
-The vault path is defined by the `HIVE_MIND_PATH` environment variable.
-The qmd collection name is defined by `HIVE_MIND_COLLECTION` (default: `hive-mind`).
-The note author is defined by `HIVE_MIND_AUTHOR` (a wikilink to a `people/` entry).
+The vault root is `${user_config.vault_path}`.
+The qmd collection is `hive-mind`.
+The author display name is `${user_config.author_name}`.
 
-If `HIVE_MIND_PATH` is unset, abort and tell the user to run `./setup.sh` in the vault directory.
+### Author Resolution
+
+Derive the author wikilink from the configured name:
+
+1. Kebab-case the author name (e.g., "Jane Smith" → `jane-smith`)
+2. Construct the wikilink: `[[people/<slug>|<name>]]`
+3. Verify `${user_config.vault_path}/people/<slug>.md` exists
+4. If it does not exist, abort and tell the user to create their person note first
+
+If `${user_config.vault_path}` is empty or the directory does not exist, abort
+and tell the user to configure the plugin via `/plugins` → hive-mind → Configure Options.
 
 `gh` CLI must be installed and authenticated. If `gh` is not found, abort with a clear message.
 
@@ -65,10 +75,10 @@ transform it.
 
 ### 2. Find the matching vault directory
 
-Look for the issues directory for the repo slug under `$HIVE_MIND_PATH/repos`:
+Look for the issues directory for the repo slug under `${user_config.vault_path}/repos`:
 
 ```bash
-ISSUES_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/issues"
+ISSUES_DIR="${user_config.vault_path}/repos/<repo-slug>/issues"
 ```
 
 - If the directory exists: use it as the target directory (`$ISSUES_DIR`).
@@ -76,10 +86,10 @@ ISSUES_DIR="$HIVE_MIND_PATH/repos/<repo-slug>/issues"
 
 ### 3. Derive project name
 
-Look up the project name from the repo-to-project mapping table in `$HIVE_MIND_PATH/PROJECTS.md`:
+Look up the project name from the repo-to-project mapping table in `${user_config.vault_path}/PROJECTS.md`:
 
 ```bash
-PROJECT=$(grep -E "^\| *<repo-slug> " "$HIVE_MIND_PATH/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
+PROJECT=$(grep -E "^\| *<repo-slug> " "${user_config.vault_path}/PROJECTS.md" | sed 's/.*| *//;s/ *$//')
 ```
 
 If no match is found, leave the `project:` field empty and flag to the user.
@@ -95,7 +105,7 @@ There is no corresponding tag for either field.
 
 ## Valid Tags
 
-All tags MUST exist in `$HIVE_MIND_PATH/TAGS.md`. Read that file every
+All tags MUST exist in `${user_config.vault_path}/TAGS.md`. Read that file every
 time you generate a note — do not rely on a cached or hardcoded list.
 
 ### Tag Rules
@@ -146,7 +156,7 @@ Focus keyword extraction on:
 
 ## Output Format
 
-Use the template from `$HIVE_MIND_PATH/templates/issue-note.md` as the structural
+Use the template from `${user_config.vault_path}/templates/issue-note.md` as the structural
 starting point. Populate each section following these guidelines:
 
 - **Title**: `Issue #<number>: <issue title>` — used in both frontmatter and as the H1
@@ -235,14 +245,14 @@ and 3 entities first. Never drop a person or repo query.
 **BM25 (per entity)** — One query per named entity:
 
 ```bash
-qmd search "<de-hyphenated entity>" --json -n 5 -c $HIVE_MIND_COLLECTION
+qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind
 ```
 
 **Semantic (one pass for problem statement)** — One `vsearch` query phrased
 as a natural language description of the issue's core problem:
 
 ```bash
-qmd vsearch "<natural language description of the problem>" --json -n 5 -c $HIVE_MIND_COLLECTION
+qmd vsearch "<natural language description of the problem>" --json -n 5 -c hive-mind
 ```
 
 The semantic query should be a 5–15 word natural language description, not
@@ -306,14 +316,15 @@ Carry the linking context into step 9. During note generation:
 
 ## Execution Steps
 
-1. Validate prerequisites: confirm `HIVE_MIND_PATH`, `HIVE_MIND_COLLECTION`,
-   and `HIVE_MIND_AUTHOR` are set; confirm `gh` is installed and authenticated.
-   If any check fails, abort with a clear message and tell the user to run
-   `./setup.sh` if env vars are missing.
+1. Validate prerequisites: confirm `${user_config.vault_path}` and
+   `${user_config.author_name}` are configured; resolve the author wikilink
+   per Author Resolution above; confirm `gh` is installed and authenticated.
+   If any check fails, abort with a clear message and tell the user to
+   configure the plugin via `/plugins` → hive-mind → Configure Options.
 2. Resolve the issue number from `$ARGUMENTS` or from the current branch name
    using the patterns defined in Issue Resolution.
-3. Read `$HIVE_MIND_PATH/TAGS.md`, `$HIVE_MIND_PATH/FRONTMATTER.md`, and
-   `$HIVE_MIND_PATH/templates/issue-note.md` to load the current valid tag list,
+3. Read `${user_config.vault_path}/TAGS.md`, `${user_config.vault_path}/FRONTMATTER.md`, and
+   `${user_config.vault_path}/templates/issue-note.md` to load the current valid tag list,
    frontmatter conventions, and the note template. Use the template as the
    structural starting point for the generated note — it defines the
    frontmatter fields and body sections.
@@ -321,8 +332,8 @@ Carry the linking context into step 9. During note generation:
    `gh issue view <number> --json title,body,labels,comments,assignees`
    If the issue is not found, abort with a clear message.
 5. Determine repo slug from `pwd` (basename of working directory or git root).
-6. Resolve vault directory by checking `$HIVE_MIND_PATH/repos/<repo-slug>/issues` exists.
-   Look up the project name from `$HIVE_MIND_PATH/PROJECTS.md`.
+6. Resolve vault directory by checking `${user_config.vault_path}/repos/<repo-slug>/issues` exists.
+   Look up the project name from `${user_config.vault_path}/PROJECTS.md`.
 7. Lightweight codebase scan — extract keywords from the issue title and body,
    then grep the local repo for affected files. Collect paths and brief
    context. Keep this shallow.
@@ -332,7 +343,7 @@ Carry the linking context into step 9. During note generation:
    duplicates.
 9. Generate note content with wikilinks woven into prose, following the Output
    Format. Use the linking context from step 8.
-10. Validate that ALL tags in frontmatter exist in `$HIVE_MIND_PATH/TAGS.md`.
+10. Validate that ALL tags in frontmatter exist in `${user_config.vault_path}/TAGS.md`.
     Apply the three-check protocol for any missing tags. Cross-reference domain
     tags observed on related notes in step 8. Use related notes' tags as a
     weak signal — do not blindly copy them. Enforce 2-5 tags.
