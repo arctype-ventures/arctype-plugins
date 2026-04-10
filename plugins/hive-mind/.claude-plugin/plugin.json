@@ -6,10 +6,14 @@
   },
   "userConfig": {
     "vault_path": {
+      "title": "Vault Path",
+      "type": "directory",
       "description": "Absolute path to your hive-mind Obsidian vault (e.g. /Users/you/code/hive-mind)",
       "sensitive": false
     },
     "author_name": {
+      "title": "Author Name",
+      "type": "string",
       "description": "Your display name as it appears in people/ notes (e.g. Jane Smith)",
       "sensitive": false
     }
