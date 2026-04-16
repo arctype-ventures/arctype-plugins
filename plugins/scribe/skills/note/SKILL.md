@@ -56,9 +56,61 @@ Read the artifact JSON and capture:
 - `speakers` (array of label + duration + sample utterances)
 - `segments` (for fallback)
 
-### 2. Calendar attendees — SKIPPED FOR NOW
+### 2. Calendar attendee pull
 
-Phase 11 work. For now, no calendar context.
+Goal: obtain a list of expected attendees for the recording's time window. This narrows candidate speakers in later attribution passes and populates the `attendees:` frontmatter.
+
+**Prerequisite:** the Google Calendar MCP must be connected. Check for the `mcp__claude_ai_Google_Calendar__list_events` tool. If it is not available, skip this entire step and proceed with empty calendar context.
+
+Compute the query window:
+
+- Start = `started_at - 30 minutes`
+- End = `stopped_at + 30 minutes`
+
+Call:
+
+```
+mcp__claude_ai_Google_Calendar__list_events(
+  time_min=<start ISO 8601>,
+  time_max=<end ISO 8601>
+)
+```
+
+Filter returned events to those that overlap `[started_at, stopped_at]` (at least partial overlap).
+
+**Zero events**: proceed with empty calendar context.
+
+**Exactly one event**: use its attendees directly.
+
+**More than one**: present the events to the user:
+
+> Multiple calendar events overlap this recording:
+>
+> 1. **Arctype engineering sync** (2026-04-17 14:30–15:30) — Alice, Bob, Carol
+> 2. **1:1 Justin / Bob** (2026-04-17 15:00–15:30) — Justin, Bob
+>
+> Which one does this recording cover? (1/2/none)
+
+Use the user's answer.
+
+For each attendee email, look up a matching vault person note:
+
+1. Primary: grep for `email:` frontmatter field match:
+
+   ```bash
+   grep -lE "^email: ${email}$" "${user_config.vault_path}/people/"*.md 2>/dev/null
+   ```
+
+2. Fallback: slugify the display name, check for `people/<slug>.md`:
+
+   ```bash
+   SLUG=$(echo "<display_name>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | tr -s '-' | sed 's/^-//;s/-$//')
+   if [ -f "${user_config.vault_path}/people/$SLUG.md" ]; then ...; fi
+   ```
+
+3. Fallback 2: unmatched → record `{email, display_name, person_path: null}`. If this person is later attributed to a speaker, a stub will be created in step 9.
+
+Build `CandidateAttendees[]` as a list of `{email, display_name, person_path|null, role?}`.
 
 ### 3. Attribution Pass A — voice enrollment
 
@@ -110,6 +162,7 @@ Prompt yourself (using your own LLM capability, no subprocess) with:
 - The transcript
 - Today's date: resolve via `date -I`
 - Author wikilink: `[[people/<kebab-case-author>|<author_name>]]`
+- The resolved attendee list (with wikilinks where available) from `CandidateAttendees[]`
 - Tag list: read `${user_config.vault_path}/TAGS.md` (use `cat`)
 
 Produce JSON matching:
@@ -156,7 +209,7 @@ type: meeting
 title: <title>
 description: <description>
 tags: [<tags>]
-attendees: []     # populated in phase 10+
+attendees: [<wikilinks from CandidateAttendees, e.g. "[[people/alice-chen|Alice Chen]]">]
 author: "[[people/<author-slug>|<author>]]"
 meeting-type: <meeting_type>
 project: arctype  # always required
