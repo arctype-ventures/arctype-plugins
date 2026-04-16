@@ -127,9 +127,71 @@ Build an attribution map. Use `${user_config.voice_similarity_threshold}` (defau
 - For each match with `similarity >= threshold`: record `speaker_label → enrolled_name`.
 - Other speakers carry forward unattributed (still `SPEAKER_N`).
 
-### 4–5. Passes B + C — SKIPPED FOR NOW
+### 4. Attribution Pass B — LLM-inferred from calendar
 
-Later phases. For this phase, any speaker not resolved in Pass A stays as `SPEAKER_N`.
+For each speaker not attributed in Pass A:
+
+1. Collect their sample utterances from `artifact.speakers[].sample_utterances` (3–5 lines, already picked by the daemon).
+2. Build candidates list:
+   - If `CandidateAttendees` (from step 2) is non-empty: use those names + roles.
+   - Else: fall back to all vault persons by listing `ls ${user_config.vault_path}/people/*.md` and extracting `title:` from each frontmatter.
+
+Build ONE batched prompt that asks yourself (using your own LLM capability — not a subprocess) to attribute every unattributed speaker at once. The prompt should:
+
+- Present each unattributed speaker with their sample utterances
+- Present the candidate list
+- Note conversational heuristics: "thanks X" implies the next speaker ≠ X; references to past work/PRs can hint at authorship
+- Ask for a JSON array:
+
+  ```json
+  [
+    {"speaker_label": "SPEAKER_01", "guess": "Alice Chen", "confidence": "high", "reasoning": "said 'I'll ship the PR' matching recent commits attributed to Alice"},
+    {"speaker_label": "SPEAKER_02", "guess": null, "confidence": "low", "reasoning": "no distinctive cues"}
+  ]
+  ```
+
+Accept into the attribution map only guesses with `confidence: high`. Pass medium/low guesses to Pass C.
+
+### 5. Attribution Pass C — interactive fallback
+
+For each speaker still unattributed after Passes A and B:
+
+1. Build the candidate prompt:
+
+   ```
+   Speaker <N> said:
+     "<sample utterance 1>"
+     "<sample utterance 2>"
+     "<sample utterance 3>"
+
+   Who is this?
+     1. <candidate 1 from calendar>
+     2. <candidate 2 from calendar>
+     ...
+     N. Someone else (type a name)
+     N+1. Unknown
+   ```
+
+   (The candidate list is `CandidateAttendees` from step 2, minus anyone already attributed in Passes A/B.)
+
+2. Ask the user. Wait for a response.
+
+3. Act on the response:
+   - Numbered candidate → map `SPEAKER_N → that person's display name`. If the candidate has `person_path: null` (unmatched calendar attendee), create the person stub here (inline, using the same template as step 9 below).
+   - "Someone else" → prompt the user for a name. Check if a matching person note exists by slug; if not, mark for stub creation.
+   - "Unknown" → leave labeled `Unknown Speaker <N>` throughout the note; do NOT create a stub; do NOT offer voice save.
+
+4. After each non-Unknown attribution, offer:
+
+   > Save Speaker <N>'s voice as **<name>**? This lets Pass A auto-attribute them next time. [y/N]
+
+   On `y`, run:
+
+   ```bash
+   scribe voices confirm-from-session --session "$SESSION" --speaker "<label>" --name "<name>"
+   ```
+
+   Log the result for the final report.
 
 ### 6. Transcript for LLM
 
