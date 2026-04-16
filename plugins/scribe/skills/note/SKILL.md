@@ -213,9 +213,78 @@ Alice Chen: Hello.
 SPEAKER_01: Hi.
 ```
 
-### 7. Vault context — SKIPPED FOR NOW
+### 7. Vault context discovery
 
-Phase 13 work.
+If `qmd` is not installed (check with `command -v qmd`), skip this entire step — note is created without vault wikilinks beyond resolved attendees.
+
+#### 7a. Extract entities
+
+From the attributed transcript, collect named entities and categorize by priority:
+
+| Priority | Entity type | Always query? |
+|---|---|---|
+| 1 | People / attendees (already resolved) | Yes |
+| 1 | Repositories | Yes |
+| 2 | Named tools, frameworks, products | Yes |
+| 3 | Named concepts, decisions | Only if distinctive |
+| 4 | Generic agenda items | Drop first under budget |
+
+Budget: ≤ 15 BM25 queries per run. Drop priority 4 first, then 3.
+
+#### 7b. BM25 per entity (de-hyphenated)
+
+```bash
+qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind
+```
+
+Always convert `-` and `/` to spaces before querying.
+
+#### 7c. Semantic pass
+
+```bash
+qmd vsearch "<5-15 word natural-language topic description>" --json -n 5 -c hive-mind
+```
+
+#### 7d. Filter results
+
+Across BM25 + semantic results:
+
+- Discard BM25 score < 0.50
+- Discard semantic results > 15% below the top semantic score
+- Discard structural files: `CLAUDE.md`, `TAGS.md`, `FRONTMATTER.md`, any `index.md`, template files
+- Deduplicate by path
+
+For each surviving result, record: title, vault path (strip `qmd://hive-mind/` prefix and `.md` suffix), pre-formatted wikilink `[[path|Title]]`.
+
+#### 7e. Glossary handling
+
+If a result has frontmatter `type: term`, treat it as glossary context: use its `title` and `description` as LLM prompt input in step 8, and wikilink to it on first mention as `[[glossary/<slug>|<Title>]]`. Do NOT add glossary-matched terms to the unfamiliar-terms list.
+
+#### 7f. Unfamiliar terms
+
+Any proper noun / acronym / jargon in the transcript that:
+
+- is NOT a known repo (from qmd results)
+- is NOT a well-known public tool/service (Stripe, GitHub, Slack, etc.)
+- has NO matching vault note
+
+→ add to `flagged_terms`: record the term AND the sentence/context where it appeared. Reported in step 12; user can opt into glossary-stub creation.
+
+#### 7g. Duplicate detection
+
+If any result's title/topic closely matches the meeting being created (same date ± 1 day, overlapping attendees, overlapping subject), present to the user:
+
+> Potential duplicate detected: `[[path|Title]]` covers a similar topic.
+>
+> Options:
+>
+> 1. Proceed — create a new note anyway
+> 2. Update — overwrite the existing note
+> 3. Merge — append this recording as a `## Recording <timestamp>` section to the existing note, preserving its frontmatter
+>
+> Choose 1, 2, or 3:
+
+User must pick before step 11 writes. Do not silently duplicate.
 
 ### 8. Structured note generation
 
@@ -226,6 +295,7 @@ Prompt yourself (using your own LLM capability, no subprocess) with:
 - Author wikilink: `[[people/<kebab-case-author>|<author_name>]]`
 - The resolved attendee list (with wikilinks where available) from `CandidateAttendees[]`
 - Tag list: read `${user_config.vault_path}/TAGS.md` (use `cat`)
+- Vault context from step 7: pre-formatted wikilinks + glossary term descriptions. Insert `[[path|Title]]` wikilinks at first mention of related notes in discussion/decisions/action items.
 
 Produce JSON matching:
 
