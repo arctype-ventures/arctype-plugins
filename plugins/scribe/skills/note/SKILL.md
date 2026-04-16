@@ -315,9 +315,57 @@ Produce JSON matching:
 
 If any field is missing or null, treat it as empty. Never abort on partial JSON.
 
-### 9. Stub creation — SKIPPED FOR NOW
+### 9. Stub person creation
 
-Phase 13 work. For this skeleton, all attendees are the raw speaker labels (no wikilinks).
+For each attendee who (a) is attributed to a speaker (not "Unknown"), AND (b) has `person_path: null` (no matching vault person note), create a stub.
+
+**Filename:** `${user_config.vault_path}/people/<slug>.md` where `<slug>` is kebab-cased full name.
+
+**Template:**
+
+```yaml
+---
+type: person
+title: <Full Name>
+description: <role if inferred, else empty>
+tags: []
+aliases:
+  - <First Name>
+  - <Full Name>
+email: <email if from calendar>
+author: "[[people/<author-slug>|<author_name>]]"
+company: <company if inferrable>
+role: <role if inferrable>
+projects: []
+repos: []
+icon: LiUser
+created: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+---
+```
+
+Body:
+
+```markdown
+# <Full Name>
+
+## Context
+
+Created as a stub from scribe meeting notes on <YYYY-MM-DD> (session <session_id>).
+
+## Meetings
+
+```dataview
+TABLE file.cday as "Date", description as "Summary"
+FROM "meetings"
+WHERE contains(file.outlinks, this.file.link)
+SORT file.cday DESC
+```
+```
+
+Record each stub in `stubs_created` for the final report.
+
+If we confirmed a voice for this person in Pass C (the user said yes to "Save voice"), the stub is implicitly paired with the enrolled voice in `voices.db`. No additional action needed here — the pairing happens via matching kebab-case slugs.
 
 ### 10. Tag validation — SKIPPED FOR NOW
 
