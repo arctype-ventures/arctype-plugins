@@ -472,15 +472,47 @@ If the user answers `n`, do NOT take corrective action in this skill (Pass A cor
 
 ### 12. Report to user
 
-Print a compact summary:
+Print structured summary:
 
 ```
-Meeting note written: $TARGET
-Title: <title>
-Duration: <duration_seconds>s
-Speakers: <count from artifact.speakers>
-Session: <session_id>
-Engines: transcription=<engine>/<model>, diarization=<engine>
+✓ Meeting note written: <target path>
+  Title: <title>
+  Duration: <duration_seconds>s  (session <session_id>)
+  Engines: transcription=<engine>/<model>, diarization=<engine>
 
-Attribution, calendar integration, and vault context are not yet implemented in this skill phase. Speaker labels remain SPEAKER_00 etc.
+Attendees (<count>):
+  ✓ [[people/alice-chen|Alice Chen]] (existing)
+  + [[people/bob-smith|Bob Smith]] (stub created)
+  ? Unknown Speaker 2 (no attribution)
+
+Voices enrolled: <names from Pass C + save voice yes>
+
+Wikilinks inserted: <count>
+
+Tags: added=<list>, substituted=<list>, dropped=<list>
+
+Flagged terms (<count>):
+  - **Mascot** — "Phone number updated in the main app (Mascot) isn't syncing."
 ```
+
+If any terms flagged, offer:
+
+> Create glossary stubs for any flagged terms? [y/N]
+
+On `y`, for each flagged term create `${user_config.vault_path}/glossary/<slug>.md` with:
+
+```yaml
+---
+type: term
+title: <term>
+description: <placeholder — derive from the context sentence>
+aliases: []
+tags: []
+author: "[[people/<author-slug>|<author_name>]]"
+icon: LiBookA
+created: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+---
+```
+
+Body: one-paragraph stub referencing the meeting where it appeared.
