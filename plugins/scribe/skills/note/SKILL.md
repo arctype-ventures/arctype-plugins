@@ -56,17 +56,47 @@ Read the artifact JSON and capture:
 - `speakers` (array of label + duration + sample utterances)
 - `segments` (for fallback)
 
-### 2–5. Speaker attribution — SKIPPED FOR NOW
+### 2. Calendar attendees — SKIPPED FOR NOW
 
-Phase 10–12 work. For this skeleton: carry speaker labels (`SPEAKER_00`, `SPEAKER_01`, …) through unchanged.
+Phase 11 work. For now, no calendar context.
+
+### 3. Attribution Pass A — voice enrollment
+
+Run voice-embedding match:
+
+```bash
+scribe voices match --session "$SESSION" > /tmp/scribe-matches.json
+```
+
+The output has shape `{"matches": [{"speaker_label": "SPEAKER_00", "enrolled_name": "Alice Chen", "similarity": 0.82}, ...]}`.
+
+Build an attribution map. Use `${user_config.voice_similarity_threshold}` (default 0.75) as the cutoff:
+
+- For each match with `similarity >= threshold`: record `speaker_label → enrolled_name`.
+- Other speakers carry forward unattributed (still `SPEAKER_N`).
+
+### 4–5. Passes B + C — SKIPPED FOR NOW
+
+Later phases. For this phase, any speaker not resolved in Pass A stays as `SPEAKER_N`.
 
 ### 6. Transcript for LLM
 
-Use the artifact's `transcript_text` as-is. It has the form:
+Apply the attribution map to `transcript_text`: replace each `SPEAKER_00:` prefix with `<name>:`. Unresolved speakers keep their label.
 
+Example:
+
+Input:
 ```
-SPEAKER_00: Hello everyone.
-SPEAKER_01: Thanks for joining.
+SPEAKER_00: Hello.
+SPEAKER_01: Hi.
+```
+
+Attribution map: `SPEAKER_00 → Alice Chen`.
+
+Output:
+```
+Alice Chen: Hello.
+SPEAKER_01: Hi.
 ```
 
 ### 7. Vault context — SKIPPED FOR NOW
@@ -141,10 +171,8 @@ session-id: <session_id>
 
 ## Speakers
 
-(Raw speaker labels — attribution not yet implemented)
-
-- SPEAKER_00
-- SPEAKER_01
+For each resolved speaker: `- <name> — <total_duration_seconds>s across <utterance_count> utterances`
+For each unresolved speaker: `- SPEAKER_N (unresolved) — <duration>s across <count>`
 
 ## Discussion
 
@@ -185,6 +213,15 @@ If `qmd` is installed, update the index silently:
 ```bash
 qmd update 2>/dev/null && qmd embed 2>/dev/null || true
 ```
+
+### After writing: confirm enrollment matches
+
+For each Pass A auto-attributed speaker, display to the user:
+
+> Attributed `SPEAKER_00` to **Alice Chen** via voice enrollment (similarity 0.82).
+> Confirm correct? [Y/n]
+
+If the user answers `n`, do NOT take corrective action in this skill (Pass A corrections are handled in Pass C during the next phase). Record the disagreement in the final report so the user knows they need to re-enroll.
 
 ### 12. Report to user
 
