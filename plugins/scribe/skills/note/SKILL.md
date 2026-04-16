@@ -9,8 +9,6 @@ disable-model-invocation: false
 
 Process a recorded session (from `/scribe:start`) into a structured hive-mind meeting note. Reads the session artifact, generates a summary via LLM, writes the note to the vault.
 
-**Note — phase:** this skill is under active development. Attribution (calendar, voice enrollment, interactive), vault context discovery, and stub creation are not yet implemented; they are phased in by later SKILL.md revisions. See `docs/specs/SPEC-scribe-skill-refactor.md` in the scribe repo for the full plan.
-
 ## Invocation
 
 `/scribe:note [session-id]`
