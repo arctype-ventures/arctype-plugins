@@ -367,9 +367,23 @@ Record each stub in `stubs_created` for the final report.
 
 If we confirmed a voice for this person in Pass C (the user said yes to "Save voice"), the stub is implicitly paired with the enrolled voice in `voices.db`. No additional action needed here — the pairing happens via matching kebab-case slugs.
 
-### 10. Tag validation — SKIPPED FOR NOW
+### 10. Tag validation
 
-Phase 13 work. For this skeleton, include only tags that already exist in TAGS.md verbatim.
+All tags in frontmatter MUST exist in `${user_config.vault_path}/TAGS.md`.
+
+For each tag the LLM returned in step 8 that is NOT already in TAGS.md:
+
+Apply the three-check protocol:
+
+1. Does an existing tag in TAGS.md already cover the concept?
+2. Does the proposed tag plausibly apply to 2+ notes (not just this meeting)?
+3. Does the tag follow existing naming conventions (kebab-case, lowercase)?
+
+If all three pass: append the tag to TAGS.md under the appropriate section. Use the wikilinked context from step 7d as a weak signal for which section.
+
+If any check fails: replace the tag with the closest broader existing tag from TAGS.md. If no reasonable substitute exists, drop the tag.
+
+Report in step 12: tags added to TAGS.md, tags substituted, tags dropped.
 
 ### 11. Write the note
 
