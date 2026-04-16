@@ -1,0 +1,27 @@
+{
+  "name": "scribe",
+  "description": "Local transcription + skill-driven meeting notes. Records audio via the scribe CLI, then processes the artifact into a hive-mind vault note with speaker attribution, calendar attendees, and vault context.",
+  "author": {
+    "name": "Arctype Ventures"
+  },
+  "userConfig": {
+    "vault_path": {
+      "title": "Vault Path",
+      "type": "directory",
+      "description": "Absolute path to your hive-mind Obsidian vault (e.g. /Users/you/code/hive-mind)",
+      "sensitive": false
+    },
+    "author_name": {
+      "title": "Author Name",
+      "type": "string",
+      "description": "Your display name as it appears in people/ notes",
+      "sensitive": false
+    },
+    "voice_similarity_threshold": {
+      "title": "Voice Similarity Threshold",
+      "type": "string",
+      "description": "Cosine-similarity threshold for Pass A voice-enrollment auto-attribution. Default 0.75.",
+      "sensitive": false
+    }
+  }
+}
