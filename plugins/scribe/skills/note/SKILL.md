@@ -104,7 +104,7 @@ Produce JSON matching the template's body sections (no scribe-specific fields, n
 ```json
 {
   "title": "Descriptive meeting title",
-  "description": "1-2 sentence summary",
+  "description": "one short sentence — plain text, no wikilinks",
   "tags": ["subset of TAGS.md"],
   "meeting_type": "sync|standup|planning|one-on-one|retro|client|kickoff|design-review|interview",
   "agenda": [],
@@ -114,6 +114,12 @@ Produce JSON matching the template's body sections (no scribe-specific fields, n
   "notes": ""
 }
 ```
+
+**`description` rules (stricter than FRONTMATTER.md for readability):**
+
+- One sentence. Aim for under 20 words. Skim-readable — something the user can parse at a glance in Obsidian's file list and Dataview tables.
+- Plain text only. No `[[wikilinks]]`, no markdown. Wikilinks belong in the body, not in frontmatter descriptions.
+- State the meeting's purpose and primary subject, not an exhaustive topic list. If you're listing more than two topics, you're writing a discussion summary — move that content into `## Discussion` and cut the description back.
 
 If any field is missing or null, treat it as empty. Never abort on partial JSON.
 
