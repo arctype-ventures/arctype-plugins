@@ -1,7 +1,6 @@
 ---
 name: start
 description: Start a background recording via the scribe CLI.
-argument-hint: ""
 disable-model-invocation: false
 ---
 
@@ -50,6 +49,7 @@ Print exactly:
 > Recording started. Session: `<session_id>`.
 >
 > To stop:
+>
 > - Run `scribe stop` in any terminal
 > - Say "hey scribe stop" aloud
 > - Tell me "stop the recording" in this session
