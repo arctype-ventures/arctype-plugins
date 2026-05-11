@@ -1,0 +1,22 @@
+{
+  "description": "Path-scoped rule injection for Salesforce DX projects. After Claude reads a matching file, the relevant rule body is appended to the tool result.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Read(*.test.js)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/inject-rule.sh lwc-jest"
+          },
+          {
+            "type": "command",
+            "if": "Read(*.css)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/inject-rule.sh slds-index"
+          }
+        ]
+      }
+    ]
+  }
+}
