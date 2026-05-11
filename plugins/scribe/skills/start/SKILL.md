@@ -1,6 +1,7 @@
 ---
 name: start
 description: Start a background recording via the scribe CLI.
+argument-hint: "[call]"
 disable-model-invocation: false
 ---
 
@@ -10,9 +11,10 @@ Start a background audio recording using the `scribe` CLI. Returns a session ID 
 
 ## Invocation
 
-`/scribe:start`
+- `/scribe:start` — single-source recording from the default mic (the common case).
+- `/scribe:start call` (or `--call`) — dual-source recording: mic **plus** system-audio loopback. Use this for Zoom / Google Meet / Discord / phone calls where you need to capture the other participants too. Requires a loopback driver (e.g. BlackHole); if missing, scribe will surface a setup hint.
 
-No arguments. If the `scribe` binary is not on `$PATH`, abort and instruct the user to build it.
+If the `scribe` binary is not on `$PATH`, abort and instruct the user to build it.
 
 ## Execution Steps
 
@@ -32,21 +34,27 @@ If the command returns nothing or errors, abort with:
 > cargo install --path crates/cli
 > ```
 
-### 2. Start the daemon
+### 2. Choose capture mode and start the daemon
+
+Inspect `$ARGUMENTS`. If it contains `call` or `--call` (in any position), use dual-source mode; otherwise default to mic-only.
 
 ```bash
+# Mic-only (default)
 scribe record --background
+
+# Dual-source: mic + autodetected system-audio loopback
+scribe record --background --call auto
 ```
 
 The command prints a single line to stdout: the session ID (format `YYYY-MM-DDTHH-MM-SS-xxxxxx`). Capture it.
 
-If the command exits non-zero, report the stderr to the user and stop.
+If the command exits non-zero, report the stderr to the user and stop. For `--call auto` failures, the most common cause is a missing loopback driver — point the user at `scribe setup --audio-routing`.
 
 ### 3. Report to the user
 
-Print exactly:
+Print exactly (substitute `mic only` or `mic + system audio` based on the mode chosen in step 2):
 
-> Recording started. Session: `<session_id>`.
+> Recording started (`<mode>`). Session: `<session_id>`.
 >
 > To stop:
 >
