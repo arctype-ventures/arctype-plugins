@@ -1,8 +1,3 @@
----
-paths:
-  - "**/*.test.js"
----
-
 # LWC Jest Imports
 
 Always import `createElement` from `@lwc/engine-dom`, not from `lwc`:
