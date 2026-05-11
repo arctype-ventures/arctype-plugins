@@ -1,7 +1,7 @@
 ---
 name: note
 description: Process a scribe session recording into a hive-mind meeting note with speaker attribution, calendar attendees, and vault wikilinks. Use when the user says '/scribe:note', 'process the scribe session', or 'write up the recording'.
-argument-hint: "[session-id]"
+argument-hint: "[session-id] [\"title\"] [attendees...] | [--title \"...\"] [--attendees \"a, b\"]"
 ---
 
 # Scribe Note
@@ -19,13 +19,30 @@ If a required value is unset or the vault directory is missing, abort and point 
 - Vault context discovery (qmd + flagged terms): [reference/vault-context.md](reference/vault-context.md)
 - Person and glossary stub templates: [reference/stubs.md](reference/stubs.md)
 
-## 1. Locate the artifact
+## 1. Parse arguments and locate the artifact
+
+`$ARGUMENTS` may contain any combination of the following, in any order (all optional):
+
+- **Session ID** — any token matching `YYYY-MM-DDTHH-MM-SS-xxxxxx`. Default: the most recent `Done` session.
+- **Title hint** — `--title "<short title>"` OR the first bare quoted string. Used as the meeting title in step 6.
+- **Attendees hint** — `--attendees "Name1, Name2, ..."` OR any remaining bare tokens / quoted strings after the title. Seeded into `CandidateAttendees` in step 2.
+
+Examples:
+
+- `/scribe:note`
+- `/scribe:note 2026-05-11T09-30-00-abc123`
+- `/scribe:note "Arctype Weekly Sync" Alice Bob`
+- `/scribe:note --title "Foxio Kickoff" --attendees "Justin, Carol"`
+
+Parse `$ARGUMENTS` yourself (using your own reasoning, not a regex) and bind:
+
+- `SESSION` — session id, or empty if not supplied
+- `USER_TITLE` — title hint, or empty
+- `USER_ATTENDEES[]` — list of attendee display names, or empty
 
 ```bash
-if [ -z "$ARGUMENTS" ]; then
+if [ -z "$SESSION" ]; then
   SESSION=$(scribe sessions 2>/dev/null | jq -r '.sessions[] | select(.state == "Done") | .session_id' | sort | tail -1)
-else
-  SESSION="$ARGUMENTS"
 fi
 
 ARTIFACT="$HOME/.local/state/scribe/sessions/$SESSION/artifact.json"
@@ -68,6 +85,8 @@ For each attendee email, resolve a vault person note:
 2. Slug fallback: kebab-case the display name and check `people/<slug>.md`.
 3. Otherwise record `{email, display_name, person_path: null}` — a stub will be created later if this person is attributed to a speaker.
 
+**Merge `USER_ATTENDEES` from step 1.** For each name the user supplied, resolve to a vault person via kebab-case slug (`people/<slug>.md`). Add `{email: null, display_name, person_path|null}` to `CandidateAttendees[]` if not already present (de-dupe by slug or display_name). When multiple calendar events overlap and `USER_ATTENDEES` is non-empty, prefer the event whose attendee list overlaps the user's list most — only fall back to the disambiguation prompt if there's still a tie.
+
 Result: `CandidateAttendees[]` as `{email, display_name, person_path|null, role?}`.
 
 ## 3. Speaker attribution (three passes)
@@ -103,7 +122,7 @@ Produce JSON matching the template's body sections (no scribe-specific fields, n
 
 ```json
 {
-  "title": "Descriptive meeting title",
+  "title": "Short meeting title",
   "description": "one short sentence — plain text, no wikilinks",
   "tags": ["subset of TAGS.md"],
   "meeting_type": "sync|standup|planning|one-on-one|retro|client|kickoff|design-review|interview",
@@ -114,6 +133,20 @@ Produce JSON matching the template's body sections (no scribe-specific fields, n
   "notes": ""
 }
 ```
+
+**`title` rules:**
+
+- **Formula:** `<Team or Project> <Scope> <Meeting type>` — name the meeting itself, not what was discussed. Aim for 2–5 words. A project name as the leading scope is fine (and expected for project-specific meetings).
+  - `Arctype Weekly Sync`
+  - `Arctype Engineering Sync`
+  - `Risk Assessments Weekly Sync`
+- NEVER append discussion topics or agenda items to the title. Those belong in `description` and `## Discussion`.
+  - ✗ `Arctype Weekly Sync — Hive Mind Productization, Foxio`
+  - ✓ `Arctype Weekly Sync`
+- Sources of truth, in order of preference:
+  1. `USER_TITLE` from step 1 if supplied — honor it; you may lightly normalize casing/spacing (`weekly sync` → `Weekly Sync`) but don't add or remove words.
+  2. The calendar event title from step 2 (strip parenthetical clutter, attendee names, time markers).
+  3. Inferred from the transcript — pick the shortest faithful name for the meeting series or one-off subject.
 
 **`description` rules (stricter than FRONTMATTER.md for readability):**
 

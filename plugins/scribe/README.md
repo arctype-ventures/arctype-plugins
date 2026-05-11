@@ -4,8 +4,8 @@ Local transcription + skill-driven meeting notes.
 
 ## Commands
 
-- `/scribe:start` — start recording
-- `/scribe:note` — process latest recording into a vault note
+- `/scribe:start` — start recording (pass `call` for dual-source mic + system-audio capture, e.g. Zoom / Meet)
+- `/scribe:note` — process a recording into a vault note (defaults to the latest; optionally accepts a session id, title, and attendees)
 
 ## Setup
 
