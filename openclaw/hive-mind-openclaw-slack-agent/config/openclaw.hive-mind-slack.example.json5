@@ -1,0 +1,105 @@
+// Example OpenClaw config patch for a read-only Hive Mind Slack agent.
+// Assumes Hive Mind + qmd are already installed locally. This repo registers the hive_mind_* tools.
+// Replace placeholders before applying. Merge; do not blindly replace the full config.
+{
+  plugins: {
+    load: {
+      paths: [
+        // Keep existing plugin load paths and add this repo path.
+        "ABSOLUTE_PATH_TO_THIS_REPO",
+      ],
+    },
+    entries: {
+      "hive-mind-slack-agent-openclaw": {
+        enabled: true,
+        config: {
+          vaultPath: "ABSOLUTE_PATH_TO_LOCAL_HIVE_MIND_REPO",
+          collection: "hive-mind",
+          // Prefer an absolute path when OpenClaw runs as a service and may not inherit shell PATH.
+          qmdPath: "ABSOLUTE_PATH_TO_QMD_OR_qmd",
+          maxSemanticSearchesPerWindow: 2,
+          semanticWindowMs: 300000,
+          maxReadChars: 40000,
+        },
+      },
+    },
+  },
+
+  agents: {
+    list: [
+      // Keep existing agents by including their ids or merging carefully with your current config.
+      { id: "main" },
+      {
+        id: "hive-mind",
+        name: "Hive Mind",
+        workspace: "~/.openclaw/workspace-hive-mind",
+        agentDir: "~/.openclaw/agents/hive-mind/agent",
+        model: "openai-codex/gpt-5.5",
+
+        // Option A: paste the contents of ../agent/hive-mind-system-prompt.md here.
+        // Option B: if your OpenClaw supports file-based prompts, point agentDir at an agent folder containing that prompt.
+        systemPromptOverride: "PASTE agent/hive-mind-system-prompt.md HERE",
+
+        // Critical: read-only Hive Mind tools only.
+        tools: {
+          // Mirrors the known-working setup: full profile baseline plus explicit allowlist.
+          // The allowlist is the actual safety boundary.
+          profile: "full",
+          allow: [
+            "hive_mind_search",
+            "hive_mind_get",
+            "hive_mind_multi_get",
+          ],
+        },
+
+        // Optional if you installed a Hive Mind skill for retrieval guidance.
+        // skills: ["hive-mind"],
+      },
+    ],
+  },
+
+  // Route the target Slack channel to the narrow hive-mind agent.
+  bindings: [
+    {
+      type: "route",
+      agentId: "hive-mind",
+      match: {
+        channel: "slack",
+        peer: { kind: "channel", id: "SLACK_CHANNEL_ID_HERE" },
+      },
+    },
+  ],
+
+  channels: {
+    slack: {
+      enabled: true,
+      mode: "socket",
+      userTokenReadOnly: true,
+      groupPolicy: "allowlist",
+      ackReaction: "eyes",
+      actions: { reactions: true },
+      channels: {
+        SLACK_CHANNEL_ID_HERE: {
+          enabled: true,
+          requireMention: true,
+
+          // For initial private testing, restrict to one Slack user:
+          // users: ["OPTIONAL_OWNER_USER_ID_HERE"],
+          // For team access after smoke tests, remove users or set users: null.
+          users: ["OPTIONAL_OWNER_USER_ID_HERE"],
+
+          systemPrompt: "This Slack channel is routed to Hive Mind, the neutral team knowledge-base assistant. Only answer Hive Mind KB/RAG questions. Use read-only Hive Mind tools. Retrieval budget: use 1-3 keyword/BM25 searches first, then read likely docs; use at most 2 semantic/vector searches per answer; do not use hybrid/qmd query. Refuse unrelated, admin, shell, filesystem, private-context, and subjective teammate-evaluation requests.",
+
+          // Defense in depth: channel-level tool allowlist too.
+          tools: {
+            allow: [
+              "hive_mind_search",
+              "hive_mind_get",
+              "hive_mind_multi_get",
+            ],
+          },
+        },
+      },
+    },
+  },
+}
