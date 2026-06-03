@@ -10,11 +10,19 @@ Each plugin can provide:
 
 - **Skills** — Slash commands (e.g., `/meeting`, `/session-note`) that give Claude specialized workflows
 
-## Available Plugins
+## Available Claude Code Plugins
 
 | Plugin                          | Description                                                                |
 | ------------------------------- | -------------------------------------------------------------------------- |
 | [hive-mind](plugins/hive-mind/) | A plugin built for agent interactions with the hive-mind knowledge system. |
+
+## OpenClaw Integrations
+
+These are not Claude Code marketplace plugins. They are kept separately under `openclaw/` so this repo can host companion OpenClaw integrations without confusing Claude Code plugin installation.
+
+| Integration                                                                      | Description                                                   |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [hive-mind-openclaw-slack-agent](openclaw/hive-mind-openclaw-slack-agent/)       | Read-only Slack-routed OpenClaw agent for local Hive Mind/qmd. |
 
 ## Installation
 

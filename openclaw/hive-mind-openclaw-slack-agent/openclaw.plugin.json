@@ -1,0 +1,30 @@
+{
+  "id": "hive-mind-slack-agent-openclaw",
+  "name": "Hive Mind Slack Agent OpenClaw",
+  "description": "Quick read-only OpenClaw tools for a Slack-routed Hive Mind knowledge-base agent.",
+  "version": "0.1.0",
+  "contracts": {
+    "tools": [
+      "hive_mind_search",
+      "hive_mind_get",
+      "hive_mind_multi_get"
+    ]
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "vaultPath": { "type": "string" },
+      "collection": { "type": "string" },
+      "qmdPath": { "type": "string" },
+      "timeoutMs": { "type": "integer", "minimum": 1000, "maximum": 30000 },
+      "maxLimit": { "type": "integer", "minimum": 1, "maximum": 50 },
+      "maxSemanticSearchesPerWindow": { "type": "integer", "minimum": 0, "maximum": 10 },
+      "semanticWindowMs": { "type": "integer", "minimum": 60000, "maximum": 3600000 },
+      "maxReadChars": { "type": "integer", "minimum": 1000, "maximum": 200000 }
+    }
+  }
+}

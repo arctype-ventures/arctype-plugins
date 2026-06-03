@@ -1,0 +1,21 @@
+{
+  "name": "hive-mind-slack-agent-openclaw",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Quick read-only OpenClaw Hive Mind tools and Slack agent handoff config.",
+  "openclaw": {
+    "extensions": ["./index.js"],
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2",
+      "minGatewayVersion": "2026.3.24-beta.2"
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "./scripts/check-prereqs.sh"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
