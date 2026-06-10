@@ -323,11 +323,13 @@ Carry the linking context into step 9. During note generation:
    configure the plugin via `/plugins` → hive-mind → Configure Options.
 2. Resolve the issue number from `$ARGUMENTS` or from the current branch name
    using the patterns defined in Issue Resolution.
-3. Read `${user_config.vault_path}/TAGS.md`, `${user_config.vault_path}/FRONTMATTER.md`, and
-   `${user_config.vault_path}/templates/issue-note.md` to load the current valid tag list,
-   frontmatter conventions, and the note template. Use the template as the
-   structural starting point for the generated note — it defines the
-   frontmatter fields and body sections.
+3. Read `${user_config.vault_path}/TAGS.md`, `${user_config.vault_path}/FRONTMATTER.md`,
+   `${user_config.vault_path}/LEXICON.md`, and `${user_config.vault_path}/templates/issue-note.md`
+   to load the current valid tag list, frontmatter conventions, the canonical spellings of
+   team terms, and the note template. Use the template as the structural starting point for
+   the generated note — it defines the frontmatter fields and body sections. Apply the
+   canonical spelling from `LEXICON.md` to any team term, product, person, or
+   portfolio-company name; never emit a known variant.
 4. Fetch issue data from GitHub via:
    `gh issue view <number> --json title,body,labels,comments,assignees`
    If the issue is not found, abort with a clear message.

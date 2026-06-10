@@ -14,7 +14,6 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 | --------------- | --------------------------------------------------------- |
 | `/search`       | Query the vault via qmd                                   |
 | `/session-note` | Capture session insights as a vault note                  |
-| `/meeting`      | Structure raw meeting notes with attendees and actions    |
 | `/pr-note`      | Document a PR — what changed, why, decisions made         |
 | `/issue-note`   | Investigation brief for a GitHub issue with codebase scan |
 
