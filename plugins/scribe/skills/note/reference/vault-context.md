@@ -57,6 +57,8 @@ Any proper noun / acronym / jargon in the transcript that:
 
 → record `{term, context_sentence}` in `flagged_terms`. Reported to the user after writing; they can opt into glossary-stub creation (template in [stubs.md](stubs.md)).
 
+Before flagging, check `${user_config.vault_path}/LEXICON.md`: if the term matches a known variant, apply its canonical form in the note instead of flagging it.
+
 ## 7. Duplicate detection
 
 If a result's title/topic closely matches the meeting being created (same date ± 1 day, overlapping attendees, overlapping subject), ask the user before writing:

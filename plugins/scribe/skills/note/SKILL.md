@@ -18,6 +18,7 @@ If a required value is unset or the vault directory is missing, abort and point 
 - Three-pass speaker attribution: [reference/attribution.md](reference/attribution.md)
 - Vault context discovery (qmd + flagged terms): [reference/vault-context.md](reference/vault-context.md)
 - Person and glossary stub templates: [reference/stubs.md](reference/stubs.md)
+- Canonical spellings & known mis-transcriptions: `${user_config.vault_path}/LEXICON.md`
 
 ## 1. Parse arguments and locate the artifact
 
@@ -115,6 +116,7 @@ Prompt yourself (using your own LLM capability — no subprocess) with:
 - Today's date: `date -I`
 - Resolved attendee list (with wikilinks where available) from `CandidateAttendees[]`
 - `${user_config.vault_path}/TAGS.md` (for the tag pool)
+- `${user_config.vault_path}/LEXICON.md` — normalize every transcript token matching a listed variant to its **canonical** spelling in the note prose; never emit a known variant
 - `${user_config.vault_path}/templates/meeting-note.md` (the canonical structure to fit)
 - Vault context from step 5: pre-formatted wikilinks + glossary term descriptions, inserted at first mention of related notes
 
