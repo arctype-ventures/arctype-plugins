@@ -8,7 +8,7 @@ Claude Code plugins extend Claude's capabilities through custom skills and tools
 
 Each plugin can provide:
 
-- **Skills** — Slash commands (e.g., `/meeting`, `/session-note`) that give Claude specialized workflows
+- **Skills** — Slash commands (e.g., `/session-note`, `/pr-note`) that give Claude specialized workflows
 
 ## Available Claude Code Plugins
 

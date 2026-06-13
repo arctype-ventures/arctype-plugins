@@ -205,10 +205,12 @@ Examples:
 3. Resolve vault path from `${user_config.vault_path}`. Find the repo's sessions directory
    by checking `${user_config.vault_path}/repos/<repo-slug>/sessions` exists.
    Look up the project name from `${user_config.vault_path}/PROJECTS.md`.
-4. Read `${user_config.vault_path}/TAGS.md` and `${user_config.vault_path}/templates/session-note.md`
-   to get the current valid tag list and the note template. Use the template as
+4. Read `${user_config.vault_path}/TAGS.md`, `${user_config.vault_path}/LEXICON.md`, and
+   `${user_config.vault_path}/templates/session-note.md` to get the current valid tag list,
+   the canonical spellings of team terms, and the note template. Use the template as
    the structural starting point for the generated note — it defines the
-   frontmatter fields and body sections.
+   frontmatter fields and body sections. Apply the canonical spelling from `LEXICON.md`
+   to any team term, product, person, or portfolio-company name; never emit a known variant.
 5. Scan current session context for extractable content per the 4 categories.
 6. **Discover vault context for linking.** If `qmd` is not installed, skip
    this entire step — the note will be created without wikilinks, same as

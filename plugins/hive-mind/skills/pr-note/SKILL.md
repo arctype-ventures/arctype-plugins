@@ -185,11 +185,13 @@ Examples:
    `gh` is installed.
 2. Resolve the target PR from `$ARGUMENTS` or by inferring from the current
    branch via `gh pr view`.
-3. Read `${user_config.vault_path}/TAGS.md`, `${user_config.vault_path}/FRONTMATTER.md`, and
-   `${user_config.vault_path}/templates/pr-note.md` to load the current valid tag list,
-   frontmatter conventions, and the note template. Use the template as the
-   structural starting point for the generated note — it defines the
-   frontmatter fields and body sections.
+3. Read `${user_config.vault_path}/TAGS.md`, `${user_config.vault_path}/FRONTMATTER.md`,
+   `${user_config.vault_path}/LEXICON.md`, and `${user_config.vault_path}/templates/pr-note.md`
+   to load the current valid tag list, frontmatter conventions, the canonical spellings of
+   team terms, and the note template. Use the template as the structural starting point for
+   the generated note — it defines the frontmatter fields and body sections. Apply the
+   canonical spelling from `LEXICON.md` to any team term, product, person, or
+   portfolio-company name; never emit a known variant.
 4. Extract PR data from GitHub via `gh pr view <number> --json title,body,files,commits,reviews,labels,state`.
 5. Determine repo slug from `pwd` and resolve the vault prs directory via
    checking `${user_config.vault_path}/repos/<repo-slug>/prs` exists.

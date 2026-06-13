@@ -152,6 +152,7 @@ qmd get "<filepath>" --full
 - Semantic search is best for questions and conceptual queries
 - If BM25 returns nothing, suggest the user try `--semantic`
 - Keep queries concise: 2-6 words for BM25, natural language for semantic
+- Canonical spellings of team terms live in `${user_config.vault_path}/LEXICON.md` — if a query term looks like a known variant, search the canonical form (qmd aliases resolve many variants too)
 
 ## Error Handling
 
