@@ -21,7 +21,7 @@ auto-discovered by Claude Code — no `plugin.json` entry is required.
 | `SessionStart`     | `startup\|clear\|compact` | `session-index.sh`         | Injects a recency-capped index of recent vault notes for the current repo (`repos/<pwd-basename>/`) as session context — titles, dates, descriptions, and paths, not full bodies |
 | `UserPromptSubmit` | —                       | `prompt-skill-reminder.sh` | Injects a skill reminder when the prompt signals a PR, an issue, or capturable knowledge (decision/learning/pattern/session) — nudging the matching note skill |
 | `PostToolUse`      | `Write\|Edit`           | `vault-note-indexer.sh`    | Runs `qmd update && qmd embed` when a `.md` file under `vault_path` is written, keeping the search index fresh |
-| `PreToolUse`       | `Bash`                  | `qmd-dehyphenate.sh`       | Rewrites `qmd search "a-b-c"` → `"a b c"` (BM25 tokenizes on hyphens)              |
+| `PreToolUse`       | `Bash`                  | `qmd-dehyphenate.sh`       | Rewrites `qmd search "a-b/c"` → `"a b c"` (BM25 tokenizes on hyphens and slashes)  |
 
 The `SessionStart` hook is the automated form of the search skill's "repo-context strategy":
 it scopes to `repos/<basename of cwd>/`, scans only date-prefixed notes (`YYYY-MM-DD-*.md`)
@@ -50,7 +50,7 @@ at runtime by kebab-casing the author name and resolving the person file.
 ## Cross-Skill Conventions
 
 - All note-creation skills share the same vault resolution, tag validation, qmd search, and frontmatter patterns — see any SKILL.md for the canonical version
-- BM25 queries must de-hyphenate: `trusted-services-lite` → `trusted services lite` (qmd tokenizes on hyphens)
+- BM25 queries must de-hyphenate: `trusted-services-lite` → `trusted services lite`, and de-slash: `config/auth` → `config auth` (qmd tokenizes on hyphens and slashes)
 - Tags are validated against the vault's `TAGS.md` using a three-check gate before adding new ones
 - Frontmatter schema is defined in the vault's `FRONTMATTER.md`
 - Wikilinks are woven into prose on first mention — no separate "Related Notes" sections
