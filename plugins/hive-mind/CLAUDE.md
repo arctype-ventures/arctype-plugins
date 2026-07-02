@@ -6,15 +6,33 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 
 | Skill          | Purpose                                                             | Input                                  |
 | -------------- | ------------------------------------------------------------------- | -------------------------------------- |
-| `search`       | Query the vault via qmd                                             | Search query                           |
+| `search`       | Query the vault via the qmd MCP server (CLI fallback)              | Search query                           |
 | `session-note` | Capture session insights as a vault note                            | Optional focus scope                   |
 | `pr-note`      | Document a PR — what changed, why, decisions made                   | PR number/URL or infers from branch    |
 | `issue-note`   | Investigation brief for a GitHub issue with codebase scan           | Issue number/URL or infers from branch |
 
+## MCP Server (qmd)
+
+The plugin bundles the **qmd MCP server** via `.mcp.json` at the plugin root — the canonical
+route for a plugin to ship an MCP server (per the Claude Code plugins reference), auto-registered
+on enable and reloaded by `/reload-plugins`:
+
+```json
+{ "mcpServers": { "qmd": { "command": "qmd", "args": ["mcp"] } } }
+```
+
+Vault search is **MCP-first**: skills use the qmd MCP `query` tool (typed `lex`/`vec`/`hyde`
+sub-queries in one call), `get`/`multi_get` to retrieve notes, and `status` to check index
+freshness. The `qmd` CLI (`qmd search`/`vsearch`/`query`/`get`) is the documented **fallback**
+when the MCP server is unavailable. Requires a `qmd` that supports `qmd mcp`.
+
+The CLI mode map: `search` → `lex`, `vsearch` → `vec`, `query` (hybrid) → `lex`+`vec`.
+
 ## Hooks
 
 Four hooks ship in `hooks/hooks.json`, with their scripts in `scripts/`. They are
-auto-discovered by Claude Code — no `plugin.json` entry is required.
+auto-discovered by Claude Code — no `plugin.json` entry is required. (Reindex stays on the
+`qmd` CLI — there is no MCP tool for `update`/`embed`; `status` only reports freshness.)
 
 | Event              | Matcher                 | Script                     | Purpose                                                                            |
 | ------------------ | ----------------------- | -------------------------- | --------------------------------------------------------------------------------- |
@@ -33,9 +51,11 @@ so it stays well under Claude Code's ~10,000-char `additionalContext` cap. Unlik
 scripts it needs no `jq` — SessionStart injects plain stdout as context.
 
 Because the indexer hook re-indexes automatically, the note-creation skills no longer carry
-a manual `qmd update && qmd embed` step. The de-hyphenate hook is a safety net for `qmd search`
-(BM25) commands only — skills still teach de-hyphenation since it informs the agent's query
-reasoning and the hook does not touch `vsearch`. The other three scripts require `jq`; `session-index.sh` does not.
+a manual `qmd update && qmd embed` step. The de-hyphenate hook is a safety net for the
+**CLI-fallback** `qmd search` (BM25) path only — the MCP-first path writes `lex` sub-queries
+de-hyphenated in the skill itself, and the hook touches neither `vsearch` nor MCP `query` calls.
+Skills still teach de-hyphenation since it informs the agent's query reasoning. The other three
+scripts require `jq`; `session-index.sh` does not.
 
 ## Plugin Configuration
 
@@ -49,8 +69,9 @@ at runtime by kebab-casing the author name and resolving the person file.
 
 ## Cross-Skill Conventions
 
-- All note-creation skills share the same vault resolution, tag validation, qmd search, and frontmatter patterns — see any SKILL.md for the canonical version
-- BM25 queries must de-hyphenate: `trusted-services-lite` → `trusted services lite`, and de-slash: `config/auth` → `config auth` (qmd tokenizes on hyphens and slashes)
+- All note-creation skills share the same vault resolution, tag validation, vault search, and frontmatter patterns — see any SKILL.md for the canonical version
+- Vault search is MCP-first: the qmd MCP `query` tool (`lex`/`vec` sub-queries) + `get`, with the `qmd` CLI as fallback
+- `lex`/BM25 queries must de-hyphenate: `trusted-services-lite` → `trusted services lite`, and de-slash: `config/auth` → `config auth` (qmd tokenizes on hyphens and slashes)
 - Tags are validated against the vault's `TAGS.md` using a three-check gate before adding new ones
 - Frontmatter schema is defined in the vault's `FRONTMATTER.md`
 - Wikilinks are woven into prose on first mention — no separate "Related Notes" sections
@@ -58,5 +79,6 @@ at runtime by kebab-casing the author name and resolving the person file.
 
 ## Prerequisites
 
-- `qmd` CLI installed
+- `qmd` installed, with `qmd mcp` support (the plugin bundles it as an MCP server; the CLI is the search fallback and powers the reindex/de-hyphenate hooks)
 - `gh` CLI for pr-note and issue-note skills
+- `jq` for the plugin's hooks (all except `session-index.sh`)
