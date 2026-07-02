@@ -234,8 +234,9 @@ Examples:
    > | Notes about jwt-auth               | `jwt-auth`              | `jwt auth`              |
    > | Notes about session-token handling | `session-token`         | `session token`         |
    >
-   > This does NOT apply to semantic search — the embedding model handles
-   > hyphens and compound terms naturally.
+   > Semantic (`vec`) matching doesn't need de-hyphenation — but still avoid
+   > hyphens there: the qmd MCP `query` parser reads `-` as a negation operator
+   > (valid only in `lex`), so a hyphenated token in a `vec` sub-query errors.
 
    **7c. Run searches** — Two sub-query types, combined via the qmd MCP `query`
    tool (CLI `qmd search`/`vsearch` is the fallback if the MCP server is down):

@@ -46,12 +46,18 @@ weight, so lead with your strongest signal:
 Map the invocation flags: default → `lex`; `--semantic` → `vec`; `--hybrid` → `lex` + `vec`.
 Add `vec` (and `hyde`) when keywords miss. Filter with `minScore`. Pass `collections: ["hive-mind"]`.
 
-## ⚠️ BM25 tokenizes on hyphens/slashes
+## ⚠️ De-hyphenate query text (all sub-query types)
 
-De-hyphenate `lex` queries: `trusted-services-lite` → `trusted services lite`, and de-slash
-`config/auth` → `config auth`. (The CLI-fallback path is auto-normalized by the dehyphenate
-hook, but write `lex` sub-queries de-hyphenated anyway.) This does NOT apply to `vec`/`hyde` —
-the embedding model handles hyphens and compound terms naturally.
+De-hyphenate and de-slash `lex` queries — BM25 tokenizes on `-` and `/`:
+`trusted-services-lite` → `trusted services lite`, `config/auth` → `config auth`. (The
+CLI-fallback path is auto-normalized by the dehyphenate hook, but write `lex` sub-queries
+de-hyphenated anyway.)
+
+Also strip hyphens from `vec`/`hyde` text — not for tokenization, but because the qmd MCP
+`query` parser reads `-` as a **negation operator** (supported only in `lex`), so a hyphenated
+token like `hive-mind` or `MCP-first` in a `vec`/`hyde` sub-query **errors**
+(`Negation (-term) is not supported in vec/hyde queries`). Write `hive mind`, not `hive-mind` —
+embeddings handle the spaced form fine.
 
 ## Context-Aware Search (No Arguments or Vague Arguments)
 
