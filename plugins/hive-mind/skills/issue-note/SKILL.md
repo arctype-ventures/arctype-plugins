@@ -242,17 +242,21 @@ and 3 entities first. Never drop a person or repo query.
 
 ### Running Searches
 
-**BM25 (per entity)** — One query per named entity:
+Combine two sub-query types via the qmd MCP `query` tool (CLI `qmd search`/`vsearch`
+is the fallback if the MCP server is down).
 
-```bash
-qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind
+**BM25 (per entity)** — One `lex` sub-query per named entity (de-hyphenated),
+scoped to the `hive-mind` collection:
+
+```
+query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["hive-mind"], limit=5)
 ```
 
-**Semantic (one pass for problem statement)** — One `vsearch` query phrased
+**Semantic (one pass for problem statement)** — One `vec` sub-query phrased
 as a natural language description of the issue's core problem:
 
-```bash
-qmd vsearch "<natural language description of the problem>" --json -n 5 -c hive-mind
+```
+query(searches=[{type:"vec", query:"<natural language description of the problem>"}], collections=["hive-mind"], limit=5)
 ```
 
 The semantic query should be a 5–15 word natural language description, not
@@ -278,8 +282,8 @@ For each remaining result, record:
 
 - Title, vault path (strip `qmd://vault/` prefix and `.md` extension)
 - Pre-formatted wikilink: `[[<vault-path>|<title>]]`
-- Tags (from the result metadata, or run `qmd get "<filepath>" -l 20`
-  for 2–3 top results to read their frontmatter tags)
+- Tags (from the result metadata, or read the frontmatter of 2–3 top results
+  with the qmd MCP `get` tool — CLI `qmd get "<filepath>" -l 20` as fallback)
 - Brief relevance note explaining why this result relates to the new note
 
 Note which domain tags recur across related notes — this is a signal
@@ -340,9 +344,9 @@ Carry the linking context into step 9. During note generation:
 7. Lightweight codebase scan — extract keywords from the issue title and body,
    then grep the local repo for affected files. Collect paths and brief
    context. Keep this shallow.
-8. Discover vault context via qmd search: BM25 per entity (soft ceiling ~6
-   queries) + one semantic pass for the problem statement. Apply de-hyphenation
-   to all BM25 queries. Build linking context per the rules above. Check for
+8. Discover vault context via the qmd MCP `query` tool: `lex` per entity (soft
+   ceiling ~6 sub-queries) + one `vec` pass for the problem statement. De-hyphenate
+   all `lex` sub-queries. Build linking context per the rules above. Check for
    duplicates.
 9. Generate note content with wikilinks woven into prose, following the Output
    Format. Use the linking context from step 8.
