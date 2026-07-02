@@ -262,7 +262,8 @@ reload" rather than "auth token reload bug".
 If total BM25 hits across all entity queries already exceed 8 unique notes,
 the semantic pass may be skipped.
 
-No `qmd update` here — that runs in step 12 after the note is written.
+No `qmd update` here — re-indexing is handled automatically by the plugin's
+`PostToolUse` indexer hook after the note is written.
 
 ### Building Linking Context
 
@@ -351,10 +352,7 @@ Carry the linking context into step 9. During note generation:
     weak signal — do not blindly copy them. Enforce 2-5 tags.
 11. Write the file to the `$ISSUES_DIR` resolved in step 6.
     If no repo directory was found, flag to user and do not continue.
-12. Update the qmd index so the new note is immediately searchable:
-    ```bash
-    qmd update 2>/dev/null && qmd embed 2>/dev/null
-    ```
-    If `qmd` is not installed, skip silently.
-13. Report to the user: file path, note title, affected areas found,
+    The plugin's `PostToolUse` indexer hook re-runs `qmd update && qmd embed`
+    automatically, so the new note becomes searchable without a manual step.
+12. Report to the user: file path, note title, affected areas found,
     and which wikilinks were added.

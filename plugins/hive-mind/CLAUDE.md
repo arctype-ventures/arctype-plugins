@@ -8,9 +8,24 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 | -------------- | ------------------------------------------------------------------- | -------------------------------------- |
 | `search`       | Query the vault via qmd                                             | Search query                           |
 | `session-note` | Capture session insights as a vault note                            | Optional focus scope                   |
-| `meeting`      | Structure raw meeting notes with attendees, decisions, action items | Raw notes or transcript                |
 | `pr-note`      | Document a PR — what changed, why, decisions made                   | PR number/URL or infers from branch    |
 | `issue-note`   | Investigation brief for a GitHub issue with codebase scan           | Issue number/URL or infers from branch |
+
+## Hooks
+
+Three hooks ship in `hooks/hooks.json`, with their scripts in `scripts/`. They are
+auto-discovered by Claude Code — no `plugin.json` entry is required.
+
+| Event              | Matcher       | Script                     | Purpose                                                                            |
+| ------------------ | ------------- | -------------------------- | --------------------------------------------------------------------------------- |
+| `UserPromptSubmit` | —             | `prompt-skill-reminder.sh` | Injects a skill reminder when the prompt signals a PR, an issue, or capturable knowledge (decision/learning/pattern/session) — nudging the matching note skill |
+| `PostToolUse`      | `Write\|Edit` | `vault-note-indexer.sh`    | Runs `qmd update && qmd embed` when a `.md` file under `vault_path` is written, keeping the search index fresh |
+| `PreToolUse`       | `Bash`        | `qmd-dehyphenate.sh`       | Rewrites `qmd search "a-b-c"` → `"a b c"` (BM25 tokenizes on hyphens)              |
+
+Because the indexer hook re-indexes automatically, the note-creation skills no longer carry
+a manual `qmd update && qmd embed` step. The de-hyphenate hook is a safety net for `qmd search`
+(BM25) commands only — skills still teach de-hyphenation since it informs the agent's query
+reasoning and the hook does not touch `vsearch`. All three scripts require `jq`.
 
 ## Plugin Configuration
 

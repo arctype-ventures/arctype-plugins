@@ -260,8 +260,8 @@ Examples:
    notes, the semantic pass may be skipped — the vault has been adequately
    sampled.
 
-   No `qmd update` here — that runs in the final step after the note is
-   written.
+   No `qmd update` here — re-indexing is handled automatically by the
+   plugin's `PostToolUse` indexer hook after the note is written.
 
    **7d. Build linking context** — From combined BM25 + semantic results,
    deduplicate by path and discard:
@@ -320,11 +320,8 @@ Examples:
 10. Determine target directory:
     - Use the path found by `find` in step 5.
     - If no repo directory was found → flag to user and do not continue.
-11. Write the file to the target directory.
-12. Update the qmd index so the new note is immediately searchable:
-    ```bash
-    qmd update 2>/dev/null && qmd embed 2>/dev/null
-    ```
-    If `qmd` is not installed, skip silently.
-13. Report to the user: file path, title, which sections were populated,
+11. Write the file to the target directory. The plugin's `PostToolUse`
+    indexer hook re-runs `qmd update && qmd embed` automatically, so the
+    new note becomes searchable without a manual step.
+12. Report to the user: file path, title, which sections were populated,
     the number of wikilinks added, and which notes were linked.
