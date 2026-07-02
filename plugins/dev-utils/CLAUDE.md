@@ -14,6 +14,9 @@ Development utilities: planning, execution, TDD, and issue creation workflows.
 | `test-driven-development` | TDD workflow for features and bugfixes                             |
 | `creating-issues`         | Research codebase and file GitHub issues from a user-provided list |
 | `merge-main`              | Pull a branch/PR, merge main into it, resolve conflicts, push      |
+| `building-skills`         | Design and build Claude Code skills (SKILL.md)                     |
+
+`creating-issues`, `merge-main`, and `building-skills` are standalone utilities — not part of the core spec → plan → execute → review flow.
 
 ## Agents
 
