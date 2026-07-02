@@ -15,6 +15,9 @@ Each plugin can provide:
 | Plugin                          | Description                                                                |
 | ------------------------------- | -------------------------------------------------------------------------- |
 | [hive-mind](plugins/hive-mind/) | A plugin built for agent interactions with the hive-mind knowledge system. |
+| [sf-utils](plugins/sf-utils/)   | Base skills and rules for working in Salesforce DX projects.               |
+| [scribe](plugins/scribe/)       | Local transcription + skill-driven meeting notes.                          |
+| [dev-utils](plugins/dev-utils/) | Basic development utilities                                                 |
 
 ## OpenClaw Integrations
 
