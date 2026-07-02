@@ -19,8 +19,12 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 
 ## Hooks
 
-The plugin ships three hooks (in `hooks/hooks.json`) that run automatically:
+The plugin ships four hooks (in `hooks/hooks.json`) that run automatically:
 
+- **Project memory on session start** — when you start Claude Code in a repo, an index of
+  recent vault notes for that repo (`repos/<dir-name>/`) is injected as context, so Claude knows
+  what team memories exist and can read any that look relevant. Titles and descriptions only —
+  full notes are read on demand.
 - **Skill reminders** — when your prompt mentions a PR, an issue, or knowledge worth keeping
   (a decision, learning, or pattern), a reminder nudges Claude toward the matching note skill.
 - **Auto-indexing** — after a note is written under your vault, `qmd update && qmd embed` runs

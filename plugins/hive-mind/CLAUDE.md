@@ -13,19 +13,29 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 
 ## Hooks
 
-Three hooks ship in `hooks/hooks.json`, with their scripts in `scripts/`. They are
+Four hooks ship in `hooks/hooks.json`, with their scripts in `scripts/`. They are
 auto-discovered by Claude Code — no `plugin.json` entry is required.
 
-| Event              | Matcher       | Script                     | Purpose                                                                            |
-| ------------------ | ------------- | -------------------------- | --------------------------------------------------------------------------------- |
-| `UserPromptSubmit` | —             | `prompt-skill-reminder.sh` | Injects a skill reminder when the prompt signals a PR, an issue, or capturable knowledge (decision/learning/pattern/session) — nudging the matching note skill |
-| `PostToolUse`      | `Write\|Edit` | `vault-note-indexer.sh`    | Runs `qmd update && qmd embed` when a `.md` file under `vault_path` is written, keeping the search index fresh |
-| `PreToolUse`       | `Bash`        | `qmd-dehyphenate.sh`       | Rewrites `qmd search "a-b-c"` → `"a b c"` (BM25 tokenizes on hyphens)              |
+| Event              | Matcher                 | Script                     | Purpose                                                                            |
+| ------------------ | ----------------------- | -------------------------- | --------------------------------------------------------------------------------- |
+| `SessionStart`     | `startup\|clear\|compact` | `session-index.sh`         | Injects a recency-capped index of recent vault notes for the current repo (`repos/<pwd-basename>/`) as session context — titles, dates, descriptions, and paths, not full bodies |
+| `UserPromptSubmit` | —                       | `prompt-skill-reminder.sh` | Injects a skill reminder when the prompt signals a PR, an issue, or capturable knowledge (decision/learning/pattern/session) — nudging the matching note skill |
+| `PostToolUse`      | `Write\|Edit`           | `vault-note-indexer.sh`    | Runs `qmd update && qmd embed` when a `.md` file under `vault_path` is written, keeping the search index fresh |
+| `PreToolUse`       | `Bash`                  | `qmd-dehyphenate.sh`       | Rewrites `qmd search "a-b-c"` → `"a b c"` (BM25 tokenizes on hyphens)              |
+
+The `SessionStart` hook is the automated form of the search skill's "repo-context strategy":
+it scopes to `repos/<basename of cwd>/`, scans only date-prefixed notes (`YYYY-MM-DD-*.md`)
+newest-first, and emits a Tier-1 primer (index only — the agent reads any note on demand).
+It is additive and never fatal: missing `vault_path`, no matching `repos/<slug>/` folder, or
+no notes → silent no-op (exit 0, no output). The index is bounded by `HIVE_MIND_INDEX_LIMIT`
+(default 8), `HIVE_MIND_INDEX_DESC_MAX` (default 200), and a hard ~8,000-char budget guard,
+so it stays well under Claude Code's ~10,000-char `additionalContext` cap. Unlike the other three
+scripts it needs no `jq` — SessionStart injects plain stdout as context.
 
 Because the indexer hook re-indexes automatically, the note-creation skills no longer carry
 a manual `qmd update && qmd embed` step. The de-hyphenate hook is a safety net for `qmd search`
 (BM25) commands only — skills still teach de-hyphenation since it informs the agent's query
-reasoning and the hook does not touch `vsearch`. All three scripts require `jq`.
+reasoning and the hook does not touch `vsearch`. The other three scripts require `jq`; `session-index.sh` does not.
 
 ## Plugin Configuration
 
