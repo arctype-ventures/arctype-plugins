@@ -234,22 +234,25 @@ Examples:
    > | Notes about jwt-auth               | `jwt-auth`              | `jwt auth`              |
    > | Notes about session-token handling | `session-token`         | `session token`         |
    >
-   > This does NOT apply to semantic search — the embedding model handles
-   > hyphens and compound terms naturally.
+   > Semantic (`vec`) matching doesn't need de-hyphenation — but still avoid
+   > hyphens there: the qmd MCP `query` parser reads `-` as a negation operator
+   > (valid only in `lex`), so a hyphenated token in a `vec` sub-query errors.
 
-   **7c. Run searches** — Two search strategies, used together:
+   **7c. Run searches** — Two sub-query types, combined via the qmd MCP `query`
+   tool (CLI `qmd search`/`vsearch` is the fallback if the MCP server is down):
 
-   **BM25 (per entity)** — One query per named entity from 7a:
+   **BM25 (per entity)** — One `lex` sub-query per named entity from 7a
+   (de-hyphenated), scoped to the `hive-mind` collection:
 
-   ```bash
-   qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind
+   ```
+   query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["hive-mind"], limit=5)
    ```
 
-   **Semantic (one pass for overall PR purpose)** — One `vsearch` query
+   **Semantic (one pass for overall PR purpose)** — One `vec` sub-query
    describing what this PR accomplishes at a high level:
 
-   ```bash
-   qmd vsearch "<conceptual description of the PR's purpose>" --json -n 5 -c hive-mind
+   ```
+   query(searches=[{type:"vec", query:"<conceptual description of the PR's purpose>"}], collections=["hive-mind"], limit=5)
    ```
 
    The semantic query should be a 5–15 word natural language description,
@@ -273,8 +276,8 @@ Examples:
    For each remaining result, record:
    - Title, vault path (strip `qmd://vault/` prefix and `.md` extension)
    - Pre-formatted wikilink: `[[<vault-path>|<title>]]`
-   - Tags (from the result metadata, or run `qmd get "<filepath>" -l 20`
-     for 2–3 top results to read their frontmatter tags)
+   - Tags (from the result metadata, or read the frontmatter of 2–3 top
+     results with the qmd MCP `get` tool — CLI `qmd get "<filepath>" -l 20` as fallback)
    - Brief relevance note explaining why this result relates to the new note
 
    Note which domain tags recur across related notes — this is a signal

@@ -7,24 +7,57 @@ disable-model-invocation: false
 
 # Hive Mind Search Skill
 
-Search the hive mind agent knowledge store using qmd and return relevant results.
+Search the hive mind knowledge store and load relevant prior knowledge before acting.
+Prefer searching over reading files directly — the index ranks by relevance, so you load
+the right context on the first try.
+
+Search is backed by **qmd** over the `hive-mind` collection, exposed through the bundled
+**qmd MCP server**. Use the qmd MCP **`query`** tool to search and **`get`** to retrieve full
+notes — that's the preferred surface (no shell-approval friction). Direct `qmd` CLI commands
+are the **fallback** if the MCP server is unavailable (see "CLI Fallback" below).
 
 ## Prerequisites
 
-- `qmd` must be installed and on `$PATH`
-- `${user_config.vault_path}` must be configured (path to vault root)
+- `${user_config.vault_path}` must be configured (path to vault root).
+- The qmd MCP server ships with this plugin and registers automatically. If its tools are
+  unavailable, fall back to the `qmd` CLI (must be installed and on `$PATH`).
 
-If `${user_config.vault_path}` is empty or the directory does not exist, abort
-and tell the user to configure the plugin via `/plugins` → hive-mind → Configure Options.
+If `${user_config.vault_path}` is empty or the directory does not exist, abort and tell the
+user to configure the plugin via `/plugins` → hive-mind → Configure Options.
 
 ## Invocation
 
-`/hive-mind:search <query>` — BM25 keyword search (fast, exact terms)
-`/hive-mind:search <query> --semantic` — Vector search (conceptual similarity)
-`/hive-mind:search <query> --hybrid` — Hybrid with LLM reranking (best quality, slowest)
+`/hive-mind:search <query>` — keyword search (fast, exact terms)
+`/hive-mind:search <query> --semantic` — vector search (conceptual similarity)
+`/hive-mind:search <query> --hybrid` — combined keyword + semantic (best recall)
 
-Default is BM25 keyword search. Use `--semantic` when the query is
-conceptual or phrased as a question. Use `--hybrid` when precision matters.
+Default is keyword search. Use `--semantic` when the query is conceptual or phrased as a
+question. Use `--hybrid` when precision matters.
+
+## Query types (qmd MCP `query`)
+
+The `query` tool takes one or more typed sub-queries in a single call — the first gets 2×
+weight, so lead with your strongest signal:
+
+- **`lex`** — BM25 keywords (exact terms, names, `"quoted phrases"`, `-negation`).
+- **`vec`** — a natural-language question (concept / fuzzy recall).
+- **`hyde`** — a 1–2 sentence hypothetical answer passage (nuanced topics).
+
+Map the invocation flags: default → `lex`; `--semantic` → `vec`; `--hybrid` → `lex` + `vec`.
+Add `vec` (and `hyde`) when keywords miss. Filter with `minScore`. Pass `collections: ["hive-mind"]`.
+
+## ⚠️ De-hyphenate query text (all sub-query types)
+
+De-hyphenate and de-slash `lex` queries — BM25 tokenizes on `-` and `/`:
+`trusted-services-lite` → `trusted services lite`, `config/auth` → `config auth`. (The
+CLI-fallback path is auto-normalized by the dehyphenate hook, but write `lex` sub-queries
+de-hyphenated anyway.)
+
+Also strip hyphens from `vec`/`hyde` text — not for tokenization, but because the qmd MCP
+`query` parser reads `-` as a **negation operator** (supported only in `lex`), so a hyphenated
+token like `hive-mind` or `MCP-first` in a `vec`/`hyde` sub-query **errors**
+(`Negation (-term) is not supported in vec/hyde queries`). Write `hive mind`, not `hive-mind` —
+embeddings handle the spaced form fine.
 
 ## Context-Aware Search (No Arguments or Vague Arguments)
 
@@ -44,8 +77,10 @@ pwd = /Users/judi/code/trusted-services-lite
 
 ### 2. Search by repo name
 
-```bash
-qmd search "<search_term>" --json -n 20 -c hive-mind
+Call the qmd MCP `query` tool with a `lex` sub-query for the de-hyphenated repo name:
+
+```
+query(searches=[{type:"lex", query:"trusted services lite"}], collections=["hive-mind"], limit=20)
 ```
 
 The vault organizes repo-related notes in `repos/<repo-name>/` directories, and notes include `repos` frontmatter linking to their relevant repository. Searching by repo name surfaces recent sessions, decisions, and context for the project.
@@ -85,43 +120,52 @@ The query is everything in `$ARGUMENTS` after stripping any flags.
 ```
 $ARGUMENTS = "JWT auth strategy --semantic"
   → query = "JWT auth strategy"
-  → mode = semantic
+  → mode = semantic (vec)
 
 $ARGUMENTS = "how to handle session tokens"
   → query = "how to handle session tokens"
-  → mode = keyword (default)
+  → mode = keyword (lex, default)
 ```
 
 ## Search Execution
 
-### 1. Execute the search
+### 1. Build and run the query (qmd MCP `query`)
 
-**Keyword (default)**:
+Pick sub-query types from the invocation mode, de-hyphenate `lex` text, then call the
+qmd MCP `query` tool with `collections: ["hive-mind"]`:
 
-```bash
-qmd search "<query>" --json -n 10 -c hive-mind
+- **Keyword (default)**: `searches=[{type:"lex", query:"<de-hyphenated query>"}]`
+- **Semantic** (`--semantic`): `searches=[{type:"vec", query:"<natural-language question>"}]`
+- **Hybrid** (`--hybrid`): `searches=[{type:"lex", query:"..."}, {type:"vec", query:"..."}]`
+
+Each hit returns a title, file path, score, and a snippet.
+
+### 2. Filter results
+
+- Drop `lex` hits scoring < 0.50.
+- Drop `vec` hits more than 15% below the top `vec` score.
+- Drop structural/template files (`CLAUDE.md`, `TAGS.md`, `FRONTMATTER.md`, any `index.md`).
+- Or pass `minScore` to the tool.
+
+### 3. Retrieve full notes before relying on them
+
+Read any note that looks relevant with the qmd MCP `get` tool — don't answer from snippets:
+
+```
+get("<file path from the result>")
 ```
 
-**Semantic** (`--semantic`):
+`get` supports a line offset (`path.md:100`) and there's a `multi_get` tool for batch retrieval.
 
-```bash
-qmd vsearch "<query>" --json -n 10 -c hive-mind
-```
+### 4. Freshness check (if results are empty or thin)
 
-**Hybrid** (`--hybrid`):
+Before concluding "nothing found," call the qmd MCP `status` tool. If `needsEmbedding > 0`
+(or the `hive-mind` collection's `lastUpdated` predates a note you expect), the index is
+stale, not the vault empty. The `PostToolUse` indexer hook normally runs `qmd update && qmd
+embed` after any vault write; if it hasn't caught up, run that and retry rather than looping
+or reporting "nothing found."
 
-```bash
-qmd query "<query>" --json -n 10 -c hive-mind
-```
-
-### 2. Parse and present results
-
-From the JSON output, extract for each result:
-
-- **Title** (from document metadata)
-- **File path** (relative to vault)
-- **Score** (relevance percentage)
-- **Snippet** (matched text excerpt)
+### 5. Present results
 
 Present results as a concise list:
 
@@ -132,29 +176,34 @@ My memories for "JWT authentication":
 2. **Setting Up qmd with Bun** (52%)
 ```
 
-### 3. Offer follow-up actions
-
-After presenting results, offer:
+Then offer follow-up actions:
 
 - "Want me to read any of these notes?"
 - "Should I search with a different mode?"
 
-To read a note, use:
+## CLI Fallback
+
+If the qmd MCP server is unavailable, use the `qmd` CLI directly (the dehyphenate PreToolUse
+hook auto-normalizes `qmd search` queries):
 
 ```bash
-qmd get "<filepath>" --full
+qmd search "<query>" --json -n 10 -c hive-mind     # keyword (lex / BM25)
+qmd vsearch "<query>" --json -n 10 -c hive-mind    # semantic (vec)
+qmd query "<query>" --json -n 10 -c hive-mind      # hybrid + rerank
+qmd get "<filepath>" --full                        # retrieve a full note
 ```
 
 ## Search Tips
 
-- BM25 tokenizes on hyphens — search `sqlite vec` not `sqlite-vec`
-- BM25 is best for exact terms, file names, and specific identifiers
-- Semantic search is best for questions and conceptual queries
-- If BM25 returns nothing, suggest the user try `--semantic`
-- Keep queries concise: 2-6 words for BM25, natural language for semantic
+- BM25 tokenizes on hyphens and slashes — search `sqlite vec` not `sqlite-vec`, `config auth` not `config/auth`
+- BM25 (`lex`) is best for exact terms, file names, and specific identifiers
+- Semantic (`vec`) is best for questions and conceptual queries; combine `lex` + `vec` for best recall
+- If `lex` returns nothing, add a `vec` sub-query
+- Keep `lex` queries concise (2–6 words); phrase `vec` queries as natural language
 - Canonical spellings of team terms live in `${user_config.vault_path}/LEXICON.md` — if a query term looks like a known variant, search the canonical form (qmd aliases resolve many variants too)
 
 ## Error Handling
 
-- If any of the above items error, stop immediately and flag to user
-- If no results: suggest trying a different search mode or broader terms
+- If the MCP `query`/`get` tools error, retry once via the CLI fallback before flagging to the user
+- If both surfaces error, stop immediately and flag to the user
+- If no results: check freshness (step 4), then suggest a different search mode or broader terms
