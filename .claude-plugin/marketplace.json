@@ -21,6 +21,12 @@
       "description": "Local transcription + skill-driven meeting notes. Records audio via the scribe CLI, then processes the artifact into a hive-mind vault note with speaker attribution, calendar attendees, and vault context.",
       "version": "0.3.1",
       "source": "./plugins/scribe"
+    },
+    {
+      "name": "dev-utils",
+      "description": "Basic development utilities",
+      "version": "0.1.0",
+      "source": "./plugins/dev-utils"
     }
   ]
 }
