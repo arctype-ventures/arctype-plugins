@@ -14,9 +14,10 @@ Development utilities: planning, execution, TDD, and issue creation workflows.
 | `test-driven-development` | TDD workflow for features and bugfixes                             |
 | `creating-issues`         | Research codebase and file GitHub issues from a user-provided list |
 | `merge-main`              | Pull a branch/PR, merge main into it, resolve conflicts, push      |
+| `git-conventions`         | Org git standards: commit format, branch naming, staging, consent |
 | `building-skills`         | Design and build Claude Code skills (SKILL.md)                     |
 
-`creating-issues`, `merge-main`, and `building-skills` are standalone utilities — not part of the core spec → plan → execute → review flow.
+`creating-issues`, `merge-main`, `git-conventions`, and `building-skills` are standalone utilities — not part of the core spec → plan → execute → review flow.
 
 ## Agents
 
@@ -29,6 +30,22 @@ Development utilities: planning, execution, TDD, and issue creation workflows.
 | `spec-document-reviewer` | Reviews spec documents for completeness and planning readiness        | Read-only        |
 | `plan-document-reviewer` | Reviews plans for completeness, spec alignment, task decomposition    | Read-only        |
 | `research`               | Gathers project context without modifying anything                    | Read-only + Bash |
+
+## Hooks
+
+Two hooks ship in `hooks/hooks.json`, with their scripts in `scripts/`. They are
+auto-discovered by Claude Code — no `plugin.json` entry is required.
+
+| Event          | Matcher                   | Script            | Purpose                                                                                                    |
+| -------------- | ------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `SessionStart` | `startup\|clear\|compact` | `git-contract.sh` | Injects the compact org git contract (commit format, branch naming, staging, consent) in git repos; silent no-op elsewhere |
+| `PreToolUse`   | `Bash`                    | `git-safety.sh`   | Tiered git/gh guardrail: denies never-allowed ops (force-push to default, git config writes, `--no-verify`, `gh repo delete`), escalates destructive ops to a human permission dialog (`ask`), and injects a conventions reminder on state-mutating git commands |
+
+Both layers state deltas on top of Claude Code's built-in git instructions
+(`includeGitInstructions` stays on) rather than replacing them. `git-safety.sh` is
+heuristic pattern matching — a convention/safety layer, not a security boundary.
+Both scripts are never-fatal (missing `jq`, non-git dirs → silent no-op).
+Tests: `scripts/test-git-safety.sh` at the repo root.
 
 ## Related
 
