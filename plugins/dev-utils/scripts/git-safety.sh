@@ -17,6 +17,10 @@
 # That failure mode is over-blocking with an explanatory reason — the agent
 # rephrases and moves on. Acceptable for a convention layer.
 #
+# Conversely, a git command wrapped in an outer shell string (e.g.
+# `bash -c "git commit --no-verify"`) evades the fast gate and passes through
+# unchecked — a known under-blocking limitation of heuristic matching.
+#
 # Never fatal: missing jq, non-Bash tool, non-git command → silent exit 0.
 set -uo pipefail
 
@@ -67,7 +71,9 @@ FORCE_PUSH='git[[:space:]]+push[^|;&]*([[:space:]]-f([[:space:]]|$)|--force)'
 if has "$FORCE_PUSH"; then
   # Denied when the default branch is named in the command, or when no branch
   # can be inferred safely and the session is sitting on the default branch.
-  if has "[[:space:]]${DEFAULT_BRANCH}([[:space:]]|$|:)" || [[ "$CURRENT_BRANCH" == "$DEFAULT_BRANCH" ]]; then
+  # Match the default branch named with a leading space OR a leading ':' (the
+  # destination side of a `src:dst` refspec, e.g. `feat/x:main`).
+  if has "([[:space:]]|:)${DEFAULT_BRANCH}([[:space:]]|$|:)" || [[ "$CURRENT_BRANCH" == "$DEFAULT_BRANCH" ]]; then
     deny "Force-pushing to '${DEFAULT_BRANCH}' is never allowed. If its history must change, stop and ask the user to handle it manually."
   fi
 fi
@@ -76,8 +82,11 @@ if has 'git[[:space:]]+config' && ! has 'git[[:space:]]+config[^|;&]*(--get|--li
   deny "Agents must not modify git config. If this change is genuinely needed, ask the user to run it themselves."
 fi
 
-if has 'git[[:space:]]+(commit|push)[^|;&]*--no-verify'; then
-  deny "Never bypass commit/push hooks with --no-verify. Fix whatever the hook is failing on instead."
+if has 'git[[:space:]]+(commit|push)[^|;&]*--no-verify' \
+   || has 'git[[:space:]]+commit[^|;&]*[[:space:]]-[a-zA-Z]*n'; then
+  # `git commit -n` is the short alias for --no-verify. (`git push -n` is
+  # --dry-run and harmless, so the -n form is scoped to commit only.)
+  deny "Never bypass commit/push hooks with --no-verify (or the -n commit alias). Fix whatever the hook is failing on instead."
 fi
 
 if has 'gh[[:space:]]+repo[[:space:]]+delete'; then
@@ -94,7 +103,7 @@ if has 'git[[:space:]]+reset[^|;&]*--hard'; then
   ask "Hard reset discards uncommitted changes irreversibly. Approve only if intended ('git stash' is the recoverable alternative)."
 fi
 
-if has 'git[[:space:]]+clean[^|;&]*[[:space:]]-[a-zA-Z]*[fdx]'; then
+if has 'git[[:space:]]+clean[^|;&]*([[:space:]]-[a-zA-Z]*[fdx]|--force)'; then
   ask "git clean permanently deletes untracked files. Approve only if intended ('git clean -n' previews what would be removed)."
 fi
 
@@ -106,7 +115,7 @@ if has 'git[[:space:]]+stash[[:space:]]+(drop|clear)'; then
   ask "Dropping stashes is irreversible. Approve only if these stashes are disposable."
 fi
 
-if has 'git[[:space:]]+(checkout|restore)([[:space:]]+--)?[[:space:]]+\.([[:space:]]|$)'; then
+if has 'git[[:space:]]+(checkout|restore)[^|;&]*[[:space:]]\.([[:space:]]|$)'; then
   ask "This discards ALL uncommitted changes in the working tree. Approve only if intended."
 fi
 

@@ -54,12 +54,16 @@ expect "deny: git config --global write"             'git config --global core.e
 expect "deny: commit --no-verify"                    'git commit --no-verify -m "x"'           "$F" '"deny"'
 expect "deny: push --no-verify"                      'git push --no-verify'                    "$F" '"deny"'
 expect "deny: gh repo delete"                        'gh repo delete arctype-ventures/x --yes' "$F" '"deny"'
+expect "deny: commit -n (short no-verify alias)"     'git commit -n -m "x"'                    "$F" '"deny"'
+expect "deny: force-push default via refspec"        'git push --force origin feat/fixture:main' "$F" '"deny"'
 
 # ── Tier 2: ask ──
 expect "ask: force-push to feature branch"           'git push --force origin feat/fixture'    "$F" '"ask"'
 expect "ask: force-with-lease to feature branch"     'git push --force-with-lease origin feat/fixture' "$F" '"ask"'
 expect "ask: reset --hard"                           'git reset --hard HEAD~1'                 "$F" '"ask"'
 expect "ask: clean -fd"                              'git clean -fd'                           "$F" '"ask"'
+expect "ask: clean --force (long flag)"              'git clean --force'                       "$F" '"ask"'
+expect "ask: checkout <ref> -- . discards tree"      'git checkout HEAD -- .'                   "$F" '"ask"'
 expect "ask: branch -D"                              'git branch -D stale-branch'              "$F" '"ask"'
 expect "ask: stash drop"                             'git stash drop'                          "$F" '"ask"'
 expect "ask: stash clear"                            'git stash clear'                         "$F" '"ask"'
@@ -76,6 +80,7 @@ expect "remind: plain push"                          'git push -u origin feat/fi
 expect "remind: merge"                               'git merge origin/main --no-edit'         "$F" 'additionalContext'
 expect "remind: gh pr create"                        'gh pr create --title "feat: x"'          "$F" 'additionalContext'
 expect "remind: rebase"                              'git rebase origin/main'                  "$F" 'additionalContext'
+expect "remind: push -n is dry-run not no-verify"    'git push -n origin feat/fixture'         "$F" 'additionalContext'
 
 # ── Pass-through: no output at all ──
 expect "empty: git status"                           'git status'                              "$F" 'EMPTY'
