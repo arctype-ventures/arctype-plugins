@@ -21,15 +21,17 @@ Budget: ≤ 15 BM25 queries total per run. Drop priority 4 first, then 3.
 ## 2. BM25 per entity
 
 ```bash
-qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind
+qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind --intent "<disambiguation context>"
 ```
 
 > **Important:** BM25 tokenizes on hyphens and slashes. Convert `-` and `/` to spaces before querying: `trusted-services-lite` → `trusted services lite`, `salesforce/lwc` → `salesforce lwc`.
 
+> **`--intent` (disambiguation):** qmd does not search the intent string — it uses it to bias query-expansion and reranking toward the right *sense* of an ambiguous term. This is where the transcript earns its keep: the meeting already says which `Phoenix` (the project, the city, or the person). Pull that context straight from the transcript. **Default to a per-term intent** built from the sentence the term appears in — that's where the disambiguation signal is strongest, and it needs no vault knowledge you don't already have. But adapt to the meeting: a simple single-topic call can reuse **one shared meeting-wide intent** across every query; a broad meeting spanning many areas (e.g. a team sync across several products) benefits most from per-term intent. Use judgment — mix the two as the meeting warrants. It pairs with `LEXICON.md`: the lexicon normalizes the *spelling* (variant → canonical), `--intent` disambiguates the *meaning*.
+
 ## 3. Semantic pass (one query)
 
 ```bash
-qmd vsearch "<5-15 word topic description>" --json -n 5 -c hive-mind
+qmd vsearch "<5-15 word topic description>" --json -n 5 -c hive-mind --intent "<meeting context>"
 ```
 
 ## 4. Filter
