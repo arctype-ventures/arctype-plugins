@@ -10,6 +10,7 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 | `session-note` | Capture session insights as a vault note                            | Optional focus scope                   |
 | `pr-note`      | Document a PR — what changed, why, decisions made                   | PR number/URL or infers from branch    |
 | `issue-note`   | Investigation brief for a GitHub issue with codebase scan           | Issue number/URL or infers from branch |
+| `setup`        | Configure local qmd maintenance (recurring index cleanup)           | None (per-machine, run once)           |
 
 ## MCP Server (qmd)
 
