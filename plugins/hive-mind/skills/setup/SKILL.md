@@ -29,9 +29,18 @@ job is just `qmd cleanup`.
 - **Ubuntu / Linux** → a `cron` entry (`crontab -e`) or a systemd user timer.
 - **Windows** → a Scheduled Task (`schtasks`).
 
+**Mind the scheduler's environment:** scheduled jobs run with a minimal `PATH` and none of your
+shell's setup, so a bare `qmd` — or the runtime its shebang points at (e.g. `node`) — often won't
+resolve. The job then registers fine but never actually runs. Resolve `qmd`'s absolute path and
+give the job whatever environment it needs to find both `qmd` and its interpreter.
+
 **Make it idempotent:** give the job a stable, recognizable label (e.g.
 `com.arctype.qmd-cleanup`, or a named crontab comment). Before creating it, check whether it
 already exists and update in place rather than adding a duplicate.
 
-**Verify:** confirm the job is registered with the scheduler's list command (`launchctl list |
-grep qmd`, `crontab -l`, `schtasks /query`) and report the result to the user.
+**Verify — run it once, don't just list it:** a job whose command doesn't resolve still registers
+and lists cleanly, then silently fails on its first real fire (which could be days or weeks away).
+So trigger a one-off run now, confirm it exits successfully and that cleanup actually ran (check
+the job's exit status and any log output), *then* confirm it's registered on the schedule with the
+scheduler's list command (`launchctl list | grep qmd`, `crontab -l`, `schtasks /query`). Report
+both to the user.
