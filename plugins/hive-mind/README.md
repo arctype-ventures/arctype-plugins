@@ -16,6 +16,7 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 | `/session-note` | Capture session insights as a vault note                  |
 | `/pr-note`      | Document a PR — what changed, why, decisions made         |
 | `/issue-note`   | Investigation brief for a GitHub issue with codebase scan |
+| `/setup`        | Configure local qmd maintenance (recurring index cleanup) |
 
 ## Hooks
 
