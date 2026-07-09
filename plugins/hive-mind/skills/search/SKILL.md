@@ -46,6 +46,16 @@ weight, so lead with your strongest signal:
 Map the invocation flags: default → `lex`; `--semantic` → `vec`; `--hybrid` → `lex` + `vec`.
 Add `vec` (and `hyde`) when keywords miss. Filter with `minScore`. Pass `collections: ["hive-mind"]`.
 
+## Always pass `intent`
+
+Every `query` call takes an **`intent`** string — a short phrase naming what you're actually
+after and the *sense* of any ambiguous term. qmd does **not** search it; it feeds `intent` to
+query-expansion and reranking to disambiguate and sharpen snippets. Derive it from the context
+that prompted the search (the task, the file open, the surrounding conversation) — e.g. searching
+`phoenix` with `intent: "the internal auth-service project, not the city"` reranks toward the
+right note. Even when a term is unambiguous, a plain topic phrase (`intent: "web page load
+times"`) still improves snippets, so include one on every call.
+
 ## ⚠️ De-hyphenate query text (all sub-query types)
 
 De-hyphenate and de-slash `lex` queries — BM25 tokenizes on `-` and `/`:
@@ -80,7 +90,7 @@ pwd = /Users/judi/code/trusted-services-lite
 Call the qmd MCP `query` tool with a `lex` sub-query for the de-hyphenated repo name:
 
 ```
-query(searches=[{type:"lex", query:"trusted services lite"}], collections=["hive-mind"], limit=20)
+query(searches=[{type:"lex", query:"trusted services lite"}], intent:"recent sessions and decisions for the trusted-services-lite repo", collections=["hive-mind"], limit=20)
 ```
 
 The vault organizes repo-related notes in `repos/<repo-name>/` directories, and notes include `repos` frontmatter linking to their relevant repository. Searching by repo name surfaces recent sessions, decisions, and context for the project.
@@ -132,7 +142,7 @@ $ARGUMENTS = "how to handle session tokens"
 ### 1. Build and run the query (qmd MCP `query`)
 
 Pick sub-query types from the invocation mode, de-hyphenate `lex` text, then call the
-qmd MCP `query` tool with `collections: ["hive-mind"]`:
+qmd MCP `query` tool with `collections: ["hive-mind"]` and an `intent` (see above):
 
 - **Keyword (default)**: `searches=[{type:"lex", query:"<de-hyphenated query>"}]`
 - **Semantic** (`--semantic`): `searches=[{type:"vec", query:"<natural-language question>"}]`
@@ -192,6 +202,9 @@ qmd vsearch "<query>" --json -n 10 -c hive-mind    # semantic (vec)
 qmd query "<query>" --json -n 10 -c hive-mind      # hybrid + rerank
 qmd get "<filepath>" --full                        # retrieve a full note
 ```
+
+Add `--intent "<what you're after>"` to `search`/`vsearch`/`query` to disambiguate — same effect
+as the MCP `intent`.
 
 ## Search Tips
 
