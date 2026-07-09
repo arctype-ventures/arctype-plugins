@@ -38,6 +38,15 @@ The plugin bundles the **qmd MCP server** (`.mcp.json` at the plugin root), so `
 note skills query the vault through native MCP tools — no per-command shell approvals. The `qmd`
 CLI is the automatic fallback if the MCP server isn't available.
 
+**Optional — shared daemon (advanced):** by default each Claude session runs its own qmd stdio
+server. If you run many sessions at once, export `QMD_MCP_URL=http://localhost:8181/mcp` in your
+shell and they'll all share one `qmd mcp --http --daemon` — one model load instead of one per
+session. It's unset by default, so this is a personal, per-machine opt-in that changes nothing for
+anyone who doesn't set it. The first session auto-starts the daemon; later sessions connect to it.
+An idle daemon unloads its models after 5 minutes (reloading on the next query), so leaving it
+running is cheap — `qmd mcp stop` is only for a full shutdown. Needs `npx`/node for the stdio↔HTTP
+bridge.
+
 ## Configuration
 
 When you enable the plugin, Claude Code prompts for two values:

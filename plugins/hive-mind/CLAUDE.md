@@ -15,10 +15,11 @@ A plugin built for agent interactions with the hive-mind knowledge system.
 
 The plugin bundles the **qmd MCP server** via `.mcp.json` at the plugin root — the canonical
 route for a plugin to ship an MCP server (per the Claude Code plugins reference), auto-registered
-on enable and reloaded by `/reload-plugins`:
+on enable and reloaded by `/reload-plugins`. The `command` points at a bundled transport shim
+(`bin/qmd-mcp`) rather than `qmd` directly:
 
 ```json
-{ "mcpServers": { "qmd": { "command": "qmd", "args": ["mcp"] } } }
+{ "mcpServers": { "qmd": { "command": "${CLAUDE_PLUGIN_ROOT}/bin/qmd-mcp", "args": ["mcp"] } } }
 ```
 
 Vault search is **MCP-first**: skills use the qmd MCP `query` tool (typed `lex`/`vec`/`hyde`
@@ -27,6 +28,29 @@ freshness. The `qmd` CLI (`qmd search`/`vsearch`/`query`/`get`) is the documente
 when the MCP server is unavailable. Requires a `qmd` that supports `qmd mcp`.
 
 The CLI mode map: `search` → `lex`, `vsearch` → `vec`, `query` (hybrid) → `lex`+`vec`.
+
+### Transport shim: default stdio, opt-in shared daemon (`bin/qmd-mcp`)
+
+The `command` is a shim, not `qmd` itself, so a single machine can point all its sessions at one
+shared daemon without changing what any other user gets:
+
+- **Default (`QMD_MCP_URL` unset)** — the shim `exec`s `qmd mcp`, a per-session stdio server
+  identical to invoking `qmd` directly. This is the path every user gets; no configuration needed.
+- **Opt-in (`QMD_MCP_URL` set, e.g. `http://localhost:8181/mcp`)** — the shim ensures one shared
+  `qmd mcp --http --daemon` is running, then bridges this session's stdio to it via
+  `npx -y mcp-remote`. N concurrent Claude sessions then share one embed/rerank model load instead
+  of paying N× RAM. qmd's daemon self-detaches and is single-instance (PID-tracked at
+  `~/.cache/qmd/mcp.pid`, logs at `~/.cache/qmd/mcp.log`), so the first session starts it and every
+  later session connects to the same one. An idle daemon **unloads its models after 5 min**
+  (`disposeModelsOnInactivity`), reclaiming the VRAM/RAM and transparently reloading on the next
+  query (~seconds, once), so a lingering shared daemon is cheap and needs no active teardown —
+  `qmd mcp stop` is only for a full shutdown.
+
+The branch lives in the shim, not `.mcp.json`, because Claude Code expands env vars in a server's
+`command`/`args`/`env`/`url`/`headers` but **not** its transport `type` — a uniformly-stdio plugin
+entry that conditionally bridges is the only zero-disruption way to offer this. `QMD_MCP_URL` is a
+personal, per-machine opt-in; unset for everyone else, behavior is unchanged. The opt-in path also
+needs `npx`/node (for the bridge) and a `qmd` with `qmd mcp --http` support.
 
 ## Hooks
 
