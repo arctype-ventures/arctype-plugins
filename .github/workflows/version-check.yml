@@ -31,8 +31,11 @@ jobs:
           missing_bumps=()
 
           for plugin in $plugin_names; do
-            # Check if any files in this plugin's directory changed (excluding marketplace.json itself)
-            plugin_changed=$(echo "$changed_files" | grep "^plugins/$plugin/" || true)
+            # Check if any files in this plugin's directory changed (excluding marketplace.json itself).
+            # Plugin-root README.md and CLAUDE.md are exempt: Claude Code does not load either
+            # for installed users, so changing them doesn't require shipping a new version.
+            # Everything else (skills, hooks, scripts, agents, manifests) is consumer-shipped.
+            plugin_changed=$(echo "$changed_files" | grep "^plugins/$plugin/" | grep -vE "^plugins/$plugin/(README|CLAUDE)\.md$" || true)
 
             if [[ -z "$plugin_changed" ]]; then
               continue
@@ -73,6 +76,8 @@ jobs:
           if [[ ${#missing_bumps[@]} -gt 0 ]]; then
             echo "::error::The following plugins have changes but no version bump: ${missing_bumps[*]}"
             echo ""
+            echo "Claude Code skips updating installed plugins whose version is unchanged,"
+            echo "so without a bump these changes never reach existing installs."
             echo "Run ./scripts/bump-version.sh to update versions."
             exit 1
           fi
