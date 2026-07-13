@@ -1,6 +1,6 @@
 ---
 name: search
-description: "You MUST use this before planning, scoping, or any work that could benefit from prior decisions, context, or domain knowledge."
+description: "You MUST use this before planning, scoping, or any work that could benefit from prior decisions, context, or domain knowledge. Searches the shared hive-mind vault of Arctype knowledge — projects, repos, engineering decisions, and team context."
 argument-hint: "<query> [--semantic] [--hybrid]"
 disable-model-invocation: false
 ---
@@ -11,7 +11,7 @@ Search the hive mind knowledge store and load relevant prior knowledge before ac
 Prefer searching over reading files directly — the index ranks by relevance, so you load
 the right context on the first try.
 
-Search is backed by **qmd** over the `hive-mind` collection, exposed through the bundled
+Search is backed by **qmd** over the `${user_config.vault_collection}` collection, exposed through the bundled
 **qmd MCP server**. Use the qmd MCP **`query`** tool to search and **`get`** to retrieve full
 notes — that's the preferred surface (no shell-approval friction). Direct `qmd` CLI commands
 are the **fallback** if the MCP server is unavailable (see "CLI Fallback" below).
@@ -44,7 +44,7 @@ weight, so lead with your strongest signal:
 - **`hyde`** — a 1–2 sentence hypothetical answer passage (nuanced topics).
 
 Map the invocation flags: default → `lex`; `--semantic` → `vec`; `--hybrid` → `lex` + `vec`.
-Add `vec` (and `hyde`) when keywords miss. Filter with `minScore`. Pass `collections: ["hive-mind"]`.
+Add `vec` (and `hyde`) when keywords miss. Filter with `minScore`. Pass `collections: ["${user_config.vault_collection}"]`.
 
 ## Always pass `intent`
 
@@ -90,7 +90,7 @@ pwd = /Users/judi/code/trusted-services-lite
 Call the qmd MCP `query` tool with a `lex` sub-query for the de-hyphenated repo name:
 
 ```
-query(searches=[{type:"lex", query:"trusted services lite"}], intent:"recent sessions and decisions for the trusted-services-lite repo", collections=["hive-mind"], limit=20)
+query(searches=[{type:"lex", query:"trusted services lite"}], intent:"recent sessions and decisions for the trusted-services-lite repo", collections=["${user_config.vault_collection}"], limit=20)
 ```
 
 The vault organizes repo-related notes in `repos/<repo-name>/` directories, and notes include `repos` frontmatter linking to their relevant repository. Searching by repo name surfaces recent sessions, decisions, and context for the project.
@@ -142,7 +142,7 @@ $ARGUMENTS = "how to handle session tokens"
 ### 1. Build and run the query (qmd MCP `query`)
 
 Pick sub-query types from the invocation mode, de-hyphenate `lex` text, then call the
-qmd MCP `query` tool with `collections: ["hive-mind"]` and an `intent` (see above):
+qmd MCP `query` tool with `collections: ["${user_config.vault_collection}"]` and an `intent` (see above):
 
 - **Keyword (default)**: `searches=[{type:"lex", query:"<de-hyphenated query>"}]`
 - **Semantic** (`--semantic`): `searches=[{type:"vec", query:"<natural-language question>"}]`
@@ -170,7 +170,7 @@ get("<file path from the result>")
 ### 4. Freshness check (if results are empty or thin)
 
 Before concluding "nothing found," call the qmd MCP `status` tool. If `needsEmbedding > 0`
-(or the `hive-mind` collection's `lastUpdated` predates a note you expect), the index is
+(or the `${user_config.vault_collection}` collection's `lastUpdated` predates a note you expect), the index is
 stale, not the vault empty. The `PostToolUse` indexer hook normally runs `qmd update && qmd
 embed` after any vault write; if it hasn't caught up, run that and retry rather than looping
 or reporting "nothing found."
@@ -197,9 +197,9 @@ If the qmd MCP server is unavailable, use the `qmd` CLI directly (the dehyphenat
 hook auto-normalizes `qmd search` queries):
 
 ```bash
-qmd search "<query>" --json -n 10 -c hive-mind     # keyword (lex / BM25)
-qmd vsearch "<query>" --json -n 10 -c hive-mind    # semantic (vec)
-qmd query "<query>" --json -n 10 -c hive-mind      # hybrid + rerank
+qmd search "<query>" --json -n 10 -c ${user_config.vault_collection}     # keyword (lex / BM25)
+qmd vsearch "<query>" --json -n 10 -c ${user_config.vault_collection}    # semantic (vec)
+qmd query "<query>" --json -n 10 -c ${user_config.vault_collection}      # hybrid + rerank
 qmd get "<filepath>" --full                        # retrieve a full note
 ```
 

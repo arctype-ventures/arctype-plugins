@@ -50,9 +50,11 @@ bridge.
 
 ## Configuration
 
-When you enable the plugin, Claude Code prompts for two values:
+When you enable the plugin, Claude Code prompts for these values:
 
 - **vault_path** — Absolute path to your hive-mind Obsidian vault
+- **vault_collection** — qmd collection name that indexes the vault (defaults to `hive-mind`;
+  leave as-is unless your index uses a different name)
 - **author_name** — Your display name as it appears in `people/` notes (e.g., "Jane Smith")
 
 To reconfigure later, run `/plugins`, select hive-mind, and choose "Configure Options".

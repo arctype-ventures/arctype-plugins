@@ -1,6 +1,6 @@
 ---
 name: session-note
-description: "You MUST invoke this (or ask the user) whenever an architecture decision is made, a non-obvious bug is diagnosed, a reusable code pattern emerges, or something surprising is learned about the repo, tooling, or developer workflow."
+description: "You MUST invoke this (or ask the user) whenever an architecture decision is made, a non-obvious bug is diagnosed, a reusable code pattern emerges, or something surprising is learned about the repo, tooling, or developer workflow. Captures Arctype-relevant knowledge into the shared hive-mind team vault."
 argument-hint: "[optional focus: e.g. 'the JWT auth decision', 'debugging the batch job']"
 disable-model-invocation: false
 ---
@@ -13,7 +13,7 @@ note to hive mind knowledge base.
 ## Vault Location
 
 The vault root is `${user_config.vault_path}`.
-The qmd collection is `hive-mind`.
+The qmd collection is `${user_config.vault_collection}`.
 The author display name is `${user_config.author_name}`.
 
 ### Author Resolution
@@ -262,17 +262,17 @@ Examples:
    tool (CLI `qmd search`/`vsearch` is the fallback if the MCP server is down):
 
    **BM25 (per entity)** — One `lex` sub-query per named entity from 6a
-   (de-hyphenated), scoped to the `hive-mind` collection:
+   (de-hyphenated), scoped to the `${user_config.vault_collection}` collection:
 
    ```
-   query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["hive-mind"], limit=5)
+   query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["${user_config.vault_collection}"], limit=5)
    ```
 
    **Semantic (one pass for primary topic)** — One `vec` sub-query for
    the note's overall topic, phrased as a natural language concept:
 
    ```
-   query(searches=[{type:"vec", query:"<conceptual description of the note's topic>"}], collections=["hive-mind"], limit=5)
+   query(searches=[{type:"vec", query:"<conceptual description of the note's topic>"}], collections=["${user_config.vault_collection}"], limit=5)
    ```
 
    The semantic query should be a 5–15 word natural language description,

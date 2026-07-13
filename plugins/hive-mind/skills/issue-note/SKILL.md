@@ -13,7 +13,7 @@ a structured investigation brief to the user's Obsidian vault.
 ## Vault Location
 
 The vault root is `${user_config.vault_path}`.
-The qmd collection is `hive-mind`.
+The qmd collection is `${user_config.vault_collection}`.
 The author display name is `${user_config.author_name}`.
 
 ### Author Resolution
@@ -247,17 +247,17 @@ Combine two sub-query types via the qmd MCP `query` tool (CLI `qmd search`/`vsea
 is the fallback if the MCP server is down).
 
 **BM25 (per entity)** — One `lex` sub-query per named entity (de-hyphenated),
-scoped to the `hive-mind` collection:
+scoped to the `${user_config.vault_collection}` collection:
 
 ```
-query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["hive-mind"], limit=5)
+query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["${user_config.vault_collection}"], limit=5)
 ```
 
 **Semantic (one pass for problem statement)** — One `vec` sub-query phrased
 as a natural language description of the issue's core problem:
 
 ```
-query(searches=[{type:"vec", query:"<natural language description of the problem>"}], collections=["hive-mind"], limit=5)
+query(searches=[{type:"vec", query:"<natural language description of the problem>"}], collections=["${user_config.vault_collection}"], limit=5)
 ```
 
 The semantic query should be a 5–15 word natural language description, not

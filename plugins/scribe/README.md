@@ -11,4 +11,6 @@ Local transcription + skill-driven meeting notes.
 
 1. Build the scribe CLI from `~/Desktop/research/scribe`
 2. Configure `vault_path` and `author_name` via `/plugins` → scribe → Configure Options
+   (`vault_collection` defaults to `hive-mind`; leave as-is unless your qmd index uses a
+   different name)
 3. (Optional) connect Google Calendar MCP for attendee candidates
