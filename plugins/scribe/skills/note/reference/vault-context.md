@@ -21,7 +21,7 @@ Budget: ≤ 15 BM25 queries total per run. Drop priority 4 first, then 3.
 ## 2. BM25 per entity
 
 ```bash
-qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind --intent "<disambiguation context>"
+qmd search "<de-hyphenated entity>" --json -n 5 -c ${user_config.vault_collection} --intent "<disambiguation context>"
 ```
 
 > **Important:** BM25 tokenizes on hyphens and slashes. Convert `-` and `/` to spaces before querying: `trusted-services-lite` → `trusted services lite`, `salesforce/lwc` → `salesforce lwc`.
@@ -31,7 +31,7 @@ qmd search "<de-hyphenated entity>" --json -n 5 -c hive-mind --intent "<disambig
 ## 3. Semantic pass (one query)
 
 ```bash
-qmd vsearch "<5-15 word topic description>" --json -n 5 -c hive-mind --intent "<meeting context>"
+qmd vsearch "<5-15 word topic description>" --json -n 5 -c ${user_config.vault_collection} --intent "<meeting context>"
 ```
 
 ## 4. Filter
@@ -43,7 +43,7 @@ Across BM25 + semantic results:
 - Discard structural files: `CLAUDE.md`, `TAGS.md`, `FRONTMATTER.md`, any `index.md`, template files
 - Deduplicate by path
 
-For each survivor, record: title, vault path (strip `qmd://hive-mind/` prefix and `.md` suffix), pre-formatted wikilink `[[path|Title]]`.
+For each survivor, record: title, vault path (strip `qmd://${user_config.vault_collection}/` prefix and `.md` suffix), pre-formatted wikilink `[[path|Title]]`.
 
 ## 5. Glossary handling
 

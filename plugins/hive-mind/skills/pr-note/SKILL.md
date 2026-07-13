@@ -13,7 +13,7 @@ documenting what shipped, why, and what decisions were made.
 ## Vault Location
 
 The vault root is `${user_config.vault_path}`.
-The qmd collection is `hive-mind`.
+The qmd collection is `${user_config.vault_collection}`.
 The author display name is `${user_config.author_name}`.
 
 ### Author Resolution
@@ -242,17 +242,17 @@ Examples:
    tool (CLI `qmd search`/`vsearch` is the fallback if the MCP server is down):
 
    **BM25 (per entity)** — One `lex` sub-query per named entity from 7a
-   (de-hyphenated), scoped to the `hive-mind` collection:
+   (de-hyphenated), scoped to the `${user_config.vault_collection}` collection:
 
    ```
-   query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["hive-mind"], limit=5)
+   query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["${user_config.vault_collection}"], limit=5)
    ```
 
    **Semantic (one pass for overall PR purpose)** — One `vec` sub-query
    describing what this PR accomplishes at a high level:
 
    ```
-   query(searches=[{type:"vec", query:"<conceptual description of the PR's purpose>"}], collections=["hive-mind"], limit=5)
+   query(searches=[{type:"vec", query:"<conceptual description of the PR's purpose>"}], collections=["${user_config.vault_collection}"], limit=5)
    ```
 
    The semantic query should be a 5–15 word natural language description,

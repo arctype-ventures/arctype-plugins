@@ -84,13 +84,14 @@ scripts require `jq`; `session-index.sh` does not.
 
 ## Plugin Configuration
 
-All skills depend on two user-configured values, prompted when the plugin is enabled:
+All skills depend on user-configured values, prompted when the plugin is enabled:
 
 - `vault_path` — Absolute path to the Obsidian vault root
+- `vault_collection` — qmd collection name that indexes the vault (defaults to `hive-mind`)
 - `author_name` — Display name matching a `people/` note (e.g., "Jane Smith")
 
-The qmd collection name `hive-mind` is hardcoded. Author wikilinks are derived
-at runtime by kebab-casing the author name and resolving the person file.
+Skills reference the collection as `${user_config.vault_collection}`. Author wikilinks are
+derived at runtime by kebab-casing the author name and resolving the person file.
 
 ## Cross-Skill Conventions
 
