@@ -56,18 +56,18 @@ that prompted the search (the task, the file open, the surrounding conversation)
 right note. Even when a term is unambiguous, a plain topic phrase (`intent: "web page load
 times"`) still improves snippets, so include one on every call.
 
-## ⚠️ De-hyphenate query text (all sub-query types)
+## ⚠️ Hyphens in query text
 
 De-hyphenate and de-slash `lex` queries — BM25 tokenizes on `-` and `/`:
 `trusted-services-lite` → `trusted services lite`, `config/auth` → `config auth`. (The
 CLI-fallback path is auto-normalized by the dehyphenate hook, but write `lex` sub-queries
 de-hyphenated anyway.)
 
-Also strip hyphens from `vec`/`hyde` text — not for tokenization, but because the qmd MCP
-`query` parser reads `-` as a **negation operator** (supported only in `lex`), so a hyphenated
-token like `hive-mind` or `MCP-first` in a `vec`/`hyde` sub-query **errors**
-(`Negation (-term) is not supported in vec/hyde queries`). Write `hive mind`, not `hive-mind` —
-embeddings handle the spaced form fine.
+Do **not** put a negation token — a whitespace-preceded `-term`, e.g. `plugin -search` — in a
+`vec`/`hyde` sub-query. The qmd `query` parser supports `-` negation only in `lex`; a token that
+*starts* with `-` in a `vec`/`hyde` sub-query **errors** (`Negation (-term) is not supported in
+vec/hyde queries. Use lex for exclusions.`). Internal hyphens are fine in `vec`/`hyde` —
+`hive-mind` and `MCP-first` embed without error — so only a token beginning with `-` matters here.
 
 ## Context-Aware Search (No Arguments or Vague Arguments)
 
