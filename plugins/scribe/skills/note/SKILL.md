@@ -9,7 +9,7 @@ argument-hint: "[session-id] [\"title\"] [attendees...] | [--title \"...\"] [--a
 Turn a `/scribe:start` recording into a vault meeting note that matches the canonical format at `${user_config.vault_path}/templates/meeting-note.md`.
 
 **Required:** `${user_config.vault_path}` (directory must exist), `${user_config.author_name}`, `scribe` CLI, `jq`.
-**Optional:** `qmd` CLI (for vault wikilinks), Google Calendar MCP (for attendee candidates).
+**Optional:** `qmd` CLI (for vault wikilinks — the vault's qmd collection is `${user_config.vault_collection}`), Google Calendar MCP (for attendee candidates).
 
 If a required value is unset or the vault directory is missing, abort and point the user at `/plugins` → scribe → Configure Options.
 
