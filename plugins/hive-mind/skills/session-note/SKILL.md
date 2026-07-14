@@ -1,6 +1,6 @@
 ---
 name: session-note
-description: "You MUST invoke this (or ask the user) whenever an architecture decision is made, a non-obvious bug is diagnosed, a reusable code pattern emerges, or something surprising is learned about the repo, tooling, or developer workflow. Captures Arctype-relevant knowledge into the shared hive-mind team vault."
+description: "You MUST invoke this (or ask the user) whenever an architecture decision is made, a non-obvious bug is diagnosed, a reusable code pattern emerges, or something surprising is learned about the repo, tooling, or developer workflow — invoked at the next natural stopping point, not mid-task. Captures Arctype-relevant knowledge into the shared hive-mind team vault."
 argument-hint: "[optional focus: e.g. 'the JWT auth decision', 'debugging the batch job']"
 disable-model-invocation: false
 ---
@@ -35,10 +35,35 @@ Extract all notable insights from the entire session.
 
 **Focused** — `/hive-mind:session-note <focus>`
 Extract insights related only to the specified focus area.
-The focus text is available as `$ARGUMENTS`.
+The focus text (may be empty): "$ARGUMENTS"
 
-When `$ARGUMENTS` is provided, filter extraction to ONLY content relevant
+When a focus is provided, filter extraction to ONLY content relevant
 to that focus. Ignore session activity unrelated to the focus.
+
+**Update** — when a session note for this repo was already written earlier
+in this session, or the user asks to fold new developments into it. Update
+that note through the same quality gates instead of raw-editing it: re-read
+TAGS.md/LEXICON.md (step 4), run the step-6 entity search for entities newly
+introduced since the note was written, apply the edits, refresh the
+`updated:` frontmatter field, and report per step 11.
+
+If work continues after a note is written this session, suggest an update
+when the new context clearly continues the note's thread. If the later work
+diverges to a different topic, do not fold it into the earlier note — write
+a new note instead.
+
+### Self-invocation timing
+
+When invoking this skill on your own (not from a user-typed command):
+
+- Fire at a natural stopping point — the current task is complete or the
+  user has confirmed a pause — never immediately after the first qualifying
+  event mid-task.
+- If the user defers ("not yet", "later"), treat it as a deferral, not a
+  decline: offer again when the session reaches its actual end or the
+  deferred work completes.
+- If the session's central decision is still unresolved, ask before writing
+  rather than assuming an earlier unanswered offer was accepted.
 
 ## Repository Resolution
 
@@ -120,7 +145,10 @@ needing the session context.
 ### 2. Decisions
 
 Choices made during the session that affect architecture, implementation
-strategy, tooling, or approach. For each decision, capture:
+strategy, tooling, or approach. Only record decisions the user has actually
+settled — if a choice is still open, capture the verified facts and options
+under Learnings instead, and leave it out of Decisions until the user
+confirms a direction. For each decision, capture:
 
 - **What** was decided
 - **Why** it was chosen (over alternatives if discussed)
@@ -200,7 +228,8 @@ Examples:
 
 ## Execution Steps
 
-1. Read `$ARGUMENTS` to determine mode (full vs focused).
+1. Read the invocation arguments (see Invocation Modes) to determine mode
+   (full vs focused vs update).
 2. Determine repo slug from `pwd` (basename of working directory or git root).
 3. Resolve vault path from `${user_config.vault_path}`. Find the repo's sessions directory
    by checking `${user_config.vault_path}/repos/<repo-slug>/sessions` exists.
@@ -268,6 +297,12 @@ Examples:
    query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["${user_config.vault_collection}"], limit=5)
    ```
 
+   Always include one `lex` sub-query for the de-hyphenated repo slug from
+   step 2, and re-run the entity queries for this note's actual content even
+   if earlier searches this session covered similar ground — those results
+   were scoped to a different question, and the linking pass must not depend
+   on incidental context from prior searches.
+
    **Semantic (one pass for primary topic)** — One `vec` sub-query for
    the note's overall topic, phrased as a natural language concept:
 
@@ -303,18 +338,22 @@ Examples:
    Note which domain tags recur across related notes — this is a signal
    (not a directive) for tag selection in step 8.
 
-   **6e. Duplicate detection** — If any result has a title or topic that
-   closely matches the note being created (same repo, overlapping
-   subject matter), flag it:
+   **6e. Duplicate detection** — treat any same-repo result scoring ≥ 0.85
+   whose title or topic overlaps the note being created as a potential
+   duplicate. Resolve it visibly — never silently:
 
-   > **Potential duplicate detected**: `[[path|Title]]` covers a similar topic.
+   - If the new note would substantially restate the existing one, present:
 
-   Present the warning to the user and ask whether to:
-   1. Proceed with creating a new note
-   2. Update the existing note instead
-   3. Merge content from both
+     > **Potential duplicate detected**: `[[path|Title]]` covers a similar topic.
 
-   Do NOT silently create a duplicate.
+     and ask whether to (1) proceed with a new note, (2) update the
+     existing note instead (see the Update invocation mode), or (3) merge
+     content from both.
+   - If the new content is clearly distinct (builds on or complements the
+     existing note), proceed without asking, but cross-link the existing
+     note and state the judgment in the step-11 report (e.g. "duplicate
+     check: 0.93 hit on <title> — treated as a companion because it covers
+     X, not Y").
 
    **6f. Use context during generation** — Carry the linking context into
    step 7. During note generation:
