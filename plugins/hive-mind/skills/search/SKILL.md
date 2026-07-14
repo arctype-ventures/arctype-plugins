@@ -44,6 +44,9 @@ weight, so lead with your strongest signal:
 - **`hyde`** — a 1–2 sentence hypothetical answer passage (nuanced topics).
 
 Map the invocation flags: default → `lex`; `--semantic` → `vec`; `--hybrid` → `lex` + `vec`.
+The flag mapping constrains user-typed invocations — when self-invoking, pick the
+mode yourself: a context-rich query (named entities plus a conceptual question)
+warrants `lex` + `vec` together from the start, without waiting for a `lex` miss.
 Add `vec` (and `hyde`) when keywords miss. Filter with `minScore`. Pass `collections: ["${user_config.vault_collection}"]`.
 
 ## Always pass `intent`
@@ -71,9 +74,15 @@ vec/hyde queries. Use lex for exclusions.`). Internal hyphens are fine in `vec`/
 
 ## Context-Aware Search (No Arguments or Vague Arguments)
 
-When you invoke this skill on your own — without specific user-provided search terms — do NOT guess at a query based on the user's intent (e.g., do NOT search `"project-name new feature scope"`). Those queries return irrelevant results because the vault contains highly specific notes, not generalized ones.
+When there is no concrete topic to search — the task is vague ("let's scope a
+new feature") — do NOT pad the repo name with generic intent words (e.g., do NOT
+search `"project-name new feature scope"`): the vault contains highly specific
+notes, and generic filler drags relevance down. Fall back to the
+**repo-context strategy** below.
 
-Instead, use the **repo-context strategy**:
+If the task context does supply concrete entities (feature names, error strings,
+repo names, people), build the query from those instead — a specific derived
+query beats the repo-name fallback, even when self-invoking.
 
 ### 1. Derive the repo name from `pwd`
 
@@ -113,8 +122,8 @@ Here's my recent memories for trusted-services-lite:
 ### When to use this strategy
 
 - The user says something general like "I want to scope a new feature" or "let's work on X"
-- You're self-invoking to gather context before planning or debugging
-- `$ARGUMENTS` is empty or contains only the user's intent (not a pointed search query)
+- You're self-invoking and the task gives you no concrete terms to search
+- The invocation arguments are empty or contain only the user's intent (not a pointed search query)
 
 ### When NOT to use this strategy
 
@@ -125,14 +134,16 @@ In those cases, use the arguments directly as the query (see Argument Parsing be
 
 ## Argument Parsing
 
-The query is everything in `$ARGUMENTS` after stripping any flags.
+Invocation arguments (may be empty): "$ARGUMENTS"
+
+The query is everything in the arguments after stripping any flags.
 
 ```
-$ARGUMENTS = "JWT auth strategy --semantic"
+args = "JWT auth strategy --semantic"
   → query = "JWT auth strategy"
   → mode = semantic (vec)
 
-$ARGUMENTS = "how to handle session tokens"
+args = "how to handle session tokens"
   → query = "how to handle session tokens"
   → mode = keyword (lex, default)
 ```
@@ -162,10 +173,21 @@ Each hit returns a title, file path, score, and a snippet.
 Read any note that looks relevant with the qmd MCP `get` tool — don't answer from snippets:
 
 ```
-get("<file path from the result>")
+get(file="<file path from the result>")     # the parameter is `file`, not `path`
+multi_get(pattern="<path1>,<path2>")        # batch retrieval; the parameter is `pattern`
 ```
 
-`get` supports a line offset (`path.md:100`) and there's a `multi_get` tool for batch retrieval.
+`get` supports a line offset (`file="path.md:100"`). Before citing any hit's
+content in your answer, confirm you fetched that hit — having fetched other
+hits does not license citing an unfetched one from its snippet.
+
+`multi_get` batch-retrieves the specific paths search ranked as relevant — do
+not glob a whole directory as a shortcut past score filtering. It skips files
+larger than `maxBytes` (default 10KB): a skipped file returns a `[SKIPPED ...]`
+marker, and an oversized one may come back mostly truncated. Either way,
+follow up with an individual `get(file=...)` on that path (with a line offset
+into the section you need, or a raised `maxBytes`) rather than treating the
+note as missing or empty.
 
 ### 4. Freshness check (if results are empty or thin)
 
@@ -190,6 +212,12 @@ Then offer follow-up actions:
 
 - "Want me to read any of these notes?"
 - "Should I search with a different mode?"
+
+When you invoked this skill yourself (context-gathering inside a larger task,
+not a user-typed `/hive-mind:search`), the list-and-offer format is optional —
+but never absorb results silently: state in one line which notes you are
+relying on (title + date) before proceeding, so the user can catch a wrong
+context pull early.
 
 ## CLI Fallback
 
@@ -217,6 +245,10 @@ as the MCP `intent`.
 
 ## Error Handling
 
-- If the MCP `query`/`get` tools error, retry once via the CLI fallback before flagging to the user
+- If an MCP tool call fails with an input-validation error (wrong or missing
+  parameter), fix the call against the tool's schema and retry the MCP tool
+  directly — the CLI fallback cannot fix a malformed call
+- If the MCP tools are unavailable or failing at the transport level, retry
+  once via the CLI fallback before flagging to the user
 - If both surfaces error, stop immediately and flag to the user
 - If no results: check freshness (step 4), then suggest a different search mode or broader terms
