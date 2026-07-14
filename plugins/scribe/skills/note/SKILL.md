@@ -51,9 +51,12 @@ SENTINEL="$HOME/.local/state/scribe/sessions/$SESSION/.processed"
 ```
 
 - If `$ARTIFACT` is missing → abort: "No artifact found for session $SESSION."
-- If `$SENTINEL` exists → abort: "Session $SESSION has already been processed."
+- If `$SENTINEL` exists and the user passed this session id explicitly → abort: "Session $SESSION has already been processed."
+- If `$SENTINEL` exists on the **default** (most-recent) session → don't dead-end: list `Done` sessions lacking a `.processed` sentinel and ask which to process; abort only if none remain.
 
-Read the artifact JSON and capture: `session_id`, `started_at`, `stopped_at`, `duration_seconds`, `transcript_text`, `speakers` (label + duration + sample utterances), `segments`.
+Read the artifact JSON and capture: `session_id`, `started_at`, `stopped_at`, `duration_seconds`, `transcript_text`, `speakers` (label + duration + sample utterances), `segments`, and the engine metadata for the step 11 report (`transcription.engine`, `transcription.model`, `diarization.engine` — may be absent in older artifacts).
+
+`artifact.speakers[]` also carries a large per-speaker `embedding` float array the LLM never needs — always project it away (e.g. `jq '.speakers | map(del(.embedding))'`); never dump the raw `speakers` array or the whole artifact into context.
 
 ## 2. Calendar attendees
 
@@ -116,7 +119,8 @@ Prompt yourself (using your own LLM capability — no subprocess) with:
 - Today's date: `date -I`
 - Resolved attendee list (with wikilinks where available) from `CandidateAttendees[]`
 - `${user_config.vault_path}/TAGS.md` (for the tag pool)
-- `${user_config.vault_path}/LEXICON.md` — normalize every transcript token matching a listed variant to its **canonical** spelling in the note prose; never emit a known variant
+- `${user_config.vault_path}/LEXICON.md` — normalize every transcript token matching a listed variant to its **canonical** spelling in the note prose; never emit a known variant. When the transcript yields a **new** variant of an entity you resolve with confidence, record it per LEXICON.md's *Maintaining it* section (variant row, plus an alias on the entity's note where one exists) and list the additions in the step 11 report. Surface lower-confidence resolutions in the report as judgment calls; when the user confirms one, record it the same way.
+- If a transcribed person name resolves to no candidate attendee, vault person, or LEXICON variant, treat it as a suspected mis-hearing: keep the name out of the note prose (write the claim unattributed) and list it in the step 11 report.
 - `${user_config.vault_path}/templates/meeting-note.md` (the canonical structure to fit)
 - Vault context from step 5: pre-formatted wikilinks + glossary term descriptions, inserted at first mention of related notes
 
@@ -190,10 +194,12 @@ The canonical format is `${user_config.vault_path}/templates/meeting-note.md`. R
 **File path:**
 
 ```bash
-DATE=$(date -I)
+DATE=$(jq -r '.started_at[0:10]' "$ARTIFACT")   # the meeting date — never the processing date
 SLUG=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | tr -s '-' | sed 's/^-//;s/-$//' | cut -c1-50)
 TARGET="${user_config.vault_path}/meetings/$DATE-$SLUG.md"
 ```
+
+Frontmatter `created:` is `$DATE` (the meeting date); `updated:` is today (`date -I`). A backlogged session must never be dated by when `/scribe:note` happens to run.
 
 **Frontmatter** — YAML block-style lists; quote wikilinks (per `FRONTMATTER.md`):
 
@@ -260,9 +266,11 @@ touch "$SENTINEL"
 command -v qmd >/dev/null && { qmd update 2>/dev/null && qmd embed 2>/dev/null; } || true
 ```
 
+A `0 new` / already-indexed result here is success — a Write hook may have indexed the note before this step runs. Don't investigate or re-run.
+
 ## 10. Confirm Pass A attributions
 
-For each Pass A auto-attribution, show the user:
+List every Pass A attribution with its similarity in the step 11 report. When every match corresponds to a user-supplied attendee (and every supplied attendee is matched), treat the argument list as pre-confirmation — report and invite correction; do not prompt. Otherwise confirm the uncovered matches in **one consolidated prompt**, not one per speaker:
 
 > Attributed `SPEAKER_00` to **Alice Chen** via voice enrollment (similarity 0.82). Confirm? [Y/n]
 
@@ -276,7 +284,7 @@ Print a structured summary:
 ✓ Meeting note written: <target path>
   Title: <title>
   Duration: <duration_seconds>s  (session <session_id>)
-  Engines: transcription=<engine>/<model>, diarization=<engine>
+  Engines: transcription=<engine>/<model>, diarization=<engine>   (print "not recorded" for absent fields)
 
 Attendees (<count>):
   ✓ [[people/alice-chen|Alice Chen]] (existing)

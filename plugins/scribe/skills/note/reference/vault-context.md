@@ -4,6 +4,8 @@ BM25 + semantic search over the vault to find wikilinks worth weaving into the m
 
 Skip this entire flow if `qmd` is not installed (`command -v qmd`). The note will still be written, just without vault wikilinks beyond resolved attendees.
 
+qmd may be exposed as an MCP server instead of (or alongside) the CLI. Use whichever is present — `qmd search` → a `lex` sub-query, `qmd vsearch` → `vec`, mapping `-n`→`limit`, `-c`→`collections`, `--intent`→`intent`.
+
 ## 1. Extract entities
 
 From the attributed transcript, categorize named entities by query priority:
