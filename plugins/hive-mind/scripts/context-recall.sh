@@ -14,6 +14,13 @@
 # keeps AND-precision (both terms must co-occur) while an off-vocabulary term only zeroes its
 # own pair. MAX_QUERIES × ~0.2s bounds the added latency (<1s worst case).
 #
+# Precision comes from CORROBORATION, not the score floor. Benchmarked against 75 real user
+# prompts from past transcripts: score alone can't separate topical from incidental — with a
+# 0.7 floor 99% of prompts surfaced hits, and even at 0.9 generic "go ahead and commit" prompts
+# scored 0.89–0.92 against workflow-heavy notes. Requiring a note to be returned by >= MIN_PAIRS
+# DISTINCT pair queries (default 2) plus a dev-workflow stoplist cut injection to ~27% of
+# prompts at ~70% top-hit relevance. The floor tunes volume; MIN_PAIRS=1 disables corroboration.
+#
 # The real constraint is noise, not latency. Controls:
 #   - gates: prompt >= MIN_PROMPT chars, >= 2 content terms, not a slash command / ! passthrough
 #   - score floor, row cap, char budget
@@ -27,7 +34,8 @@
 #   HIVE_MIND_VAULT              vault root (required; unset/missing → no-op)
 #   HIVE_MIND_COLLECTION         qmd collection to search          (default hive-mind)
 #   HIVE_MIND_RECALL_LIMIT       max rows per injection            (default 3)
-#   HIVE_MIND_RECALL_MIN_SCORE   BM25 score floor, 0..1            (default 0.7)
+#   HIVE_MIND_RECALL_MIN_SCORE   BM25 score floor, 0..1            (default 0.85)
+#   HIVE_MIND_RECALL_MIN_PAIRS   distinct pair queries that must agree (default 2; 1 = off)
 #   HIVE_MIND_RECALL_MIN_PROMPT  min prompt chars before querying  (default 40)
 set -uo pipefail
 
@@ -35,7 +43,8 @@ VAULT="${HIVE_MIND_VAULT:-}"
 VAULT="${VAULT/#\~/$HOME}"                           # expand leading ~ (matches session-index.sh)
 COLLECTION="${HIVE_MIND_COLLECTION:-hive-mind}"
 LIMIT="${HIVE_MIND_RECALL_LIMIT:-3}"
-MIN_SCORE="${HIVE_MIND_RECALL_MIN_SCORE:-0.7}"
+MIN_SCORE="${HIVE_MIND_RECALL_MIN_SCORE:-0.85}"
+MIN_PAIRS="${HIVE_MIND_RECALL_MIN_PAIRS:-2}"
 MIN_PROMPT="${HIVE_MIND_RECALL_MIN_PROMPT:-40}"
 STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/hive-mind"
 DESC_MAX=200
@@ -58,11 +67,14 @@ case "$prompt" in /*|!*) exit 0 ;; esac              # slash commands and shell 
 # Bag-of-words query: lowercase, every non-alphanumeric → space (de-hyphenates and de-slashes,
 # matching qmd's BM25 tokenizer), then drop stopwords / short tokens / bare numbers, dedupe
 # preserving order, cap at MAX_TERMS. BM25 ranks by term overlap, so an honest de-noised
-# bag-of-words is the query — no LLM extraction on this hot path.
+# bag-of-words is the query — no LLM extraction on this hot path. The stoplist carries two
+# extra tiers beyond standard English: conversational filler ("okay", "ahead") and dev-workflow
+# vocabulary ("commit", "push", "pr") — session notes are saturated with workflow narrative, so
+# workflow pairs corroborate on the wrong notes (benchmark-verified) and must never form pairs.
 terms=$(printf '%s' "$prompt" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' ' ' \
   | tr -s ' ' '\n' | awk -v max="$MAX_TERMS" '
     BEGIN {
-      split("the a an and or but nor if then else when while for to of in on at by is are was were be been being it its this that these those there here what which who whom whose why how i you we they he she them his her their our your my me us am do does did done doing have has had having not no yes can could should would will shall may might must with as from into onto over under about across after before between during without within against please thanks thank just like want wants need needs needed also really very much more most some any all each both few own same other another so than too only now new get got getting go goes going still let lets make makes making sure able way thing things something anything nothing use used using", w, " ")
+      split("the a an and or but nor if then else when while for to of in on at by is are was were be been being it its this that these those there here what which who whom whose why how i you we they he she them his her their our your my me us am do does did done doing have has had having not no yes can could should would will shall may might must with as from into onto over under about across after before between during without within against please thanks thank just like want wants need needs needed also really very much more most some any all each both few own same other another so than too only now new get got getting go goes going still let lets make makes making sure able way thing things something anything nothing use used using okay yeah yep sorry ahead great good actually definitely first next last piece work task commit commits committed branch branches push pushed pull pr prs merge merged changes change changed update updates updated add added fix fixed run runs running look looks looking take took start started keep", w, " ")
       for (i in w) stop[w[i]] = 1
     }
     length($0) >= 3 && !($0 in stop) && $0 !~ /^[0-9]+$/ && !seen[$0]++ { out = out $0 " "; n++ }
@@ -70,25 +82,31 @@ terms=$(printf '%s' "$prompt" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '
     END { sub(/ $/, "", out); print out }')
 [[ "$terms" == *" "* ]] || exit 0                    # require >= 2 content terms
 
-# One lex query per stride-2 term pair (AND semantics — see header), JSON arrays concatenated.
+# One lex query per stride-2 term pair (AND semantics — see header), each hit tagged with its
+# pair-query index so corroboration can count distinct agreeing pairs.
 results=""
 qcount=0
 prev=""
 for t in $terms; do
   if [[ -z "$prev" ]]; then prev="$t"; continue; fi
-  r=$(qmd search "$prev $t" -n 5 -c "$COLLECTION" --json 2>/dev/null) && results+="$r"$'\n'
+  r=$(qmd search "$prev $t" -n 5 -c "$COLLECTION" --json 2>/dev/null \
+      | jq -c --argjson qi "$qcount" '[.[] | {file, score, qi: $qi}]' 2>/dev/null)
+  [[ -n "$r" ]] && results+="$r"$'\n'
   prev=""
   qcount=$((qcount + 1))
   (( qcount >= MAX_QUERIES )) && break
 done
 [[ -n "$results" ]] || exit 0
 
-# Union: score-filter, collapse to one row per note path (a note can hit on several sections
-# and several pair queries) keeping its best score, rank best-first.
-hits=$(printf '%s' "$results" | jq -rs --arg pre "qmd://$COLLECTION/" --argjson min "$MIN_SCORE" '
+# Union + corroborate: collapse to one row per note path keeping its best score and the count
+# of distinct pairs that returned it; keep notes with >= MIN_PAIRS agreeing pairs above the
+# score floor, rank best-first.
+hits=$(printf '%s' "$results" | jq -rs --arg pre "qmd://$COLLECTION/" \
+    --argjson min "$MIN_SCORE" --argjson minpairs "$MIN_PAIRS" '
     add // []
-    | map(select(.score >= $min))
-    | group_by(.file) | map({file: .[0].file, score: (map(.score) | max)})
+    | group_by(.file)
+    | map({file: .[0].file, score: (map(.score) | max), pairs: (map(.qi) | unique | length)})
+    | map(select(.score >= $min and .pairs >= $minpairs))
     | sort_by(-.score) | .[].file | ltrimstr($pre)' 2>/dev/null)
 [[ -n "$hits" ]] || exit 0
 

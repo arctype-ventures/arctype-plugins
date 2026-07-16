@@ -89,16 +89,27 @@ Instead the prompt's content terms (stopwords/short tokens/numbers dropped) are 
 stride-2 pairs of adjacent terms, one small query per pair, unioned by max score — ≤5 queries,
 ~0.6s measured end-to-end, bounded by the hook timeout.
 
-Noise is the real constraint, not latency. Controls: prompts under 40 chars, slash commands,
-and `!` passthroughs are skipped; results are score-floored (default 0.7), capped at 3 rows /
-~2,500 chars per injection, and deduped per session via a seen file
+Noise is the real constraint, not latency — and **corroboration, not the score floor, is the
+precision knob**. Benchmarked against 75 real user prompts from past transcripts: with a 0.7
+floor alone, 99% of prompts surfaced hits (avg 16.6 candidate rows), and even at 0.9 generic
+"go ahead and commit" prompts scored 0.89–0.92 against workflow-heavy session notes — the same
+range as genuine topical hits, because qmd's normalized BM25 scores compress toward the top on
+a ~950-doc corpus. What separates topical from incidental is *agreement*: a note only counts
+if returned by ≥2 distinct pair queries (`HIVE_MIND_RECALL_MIN_PAIRS`, set 1 to disable),
+combined with a stoplist that includes dev-workflow vocabulary ("commit", "push", "pr" — never
+allowed to form pairs). That config injected on ~27% of benchmark prompts at ~70% top-hit
+relevance. The floor (default 0.85) tunes volume on top.
+
+Other controls: prompts under 40 chars, slash commands, and `!` passthroughs are skipped;
+injections are capped at 3 rows / ~2,500 chars and deduped per session via a seen file
 (`~/.cache/hive-mind/<session_id>.seen`, stale files swept after 7 days). `session-index.sh`
 seeds the seen file with its Tier-1 rows (so recall never re-surfaces them) and resets it on
 `startup`/`clear` but not `compact`; the file's `recall` rows double as the manifest
-`compact-restore.sh` replays after compaction. Rows are rendered from each note's frontmatter —
-qmd hit titles are section headings ("Learnings"), not note titles. Tunables:
-`HIVE_MIND_RECALL_LIMIT`, `HIVE_MIND_RECALL_MIN_SCORE`, `HIVE_MIND_RECALL_MIN_PROMPT`, and
-`HIVE_MIND_COLLECTION` (defaults to `hive-mind`).
+`compact-restore.sh` replays after compaction. All three injection points emit **index rows
+only** (title · date · description · path, rendered from each note's frontmatter — qmd hit
+titles are section headings, not note titles); full note bodies are never injected. Tunables:
+`HIVE_MIND_RECALL_LIMIT`, `HIVE_MIND_RECALL_MIN_SCORE`, `HIVE_MIND_RECALL_MIN_PAIRS`,
+`HIVE_MIND_RECALL_MIN_PROMPT`, and `HIVE_MIND_COLLECTION` (defaults to `hive-mind`).
 
 Because the indexer hook re-indexes automatically, the note-creation skills no longer carry
 a manual `qmd update && qmd embed` step. The de-hyphenate hook is a safety net for the
