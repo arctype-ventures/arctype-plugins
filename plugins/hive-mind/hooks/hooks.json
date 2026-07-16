@@ -10,6 +10,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "HIVE_MIND_VAULT=\"${CLAUDE_PLUGIN_OPTION_VAULT_PATH}\" \"${CLAUDE_PLUGIN_ROOT}/scripts/compact-restore.sh\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -19,6 +29,11 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/prompt-skill-reminder.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "HIVE_MIND_VAULT=\"${CLAUDE_PLUGIN_OPTION_VAULT_PATH}\" HIVE_MIND_COLLECTION=\"${CLAUDE_PLUGIN_OPTION_VAULT_COLLECTION}\" \"${CLAUDE_PLUGIN_ROOT}/scripts/context-recall.sh\"",
+            "timeout": 10
           }
         ]
       }
