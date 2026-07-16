@@ -55,14 +55,16 @@ needs `npx`/node (for the bridge) and a `qmd` with `qmd mcp --http` support.
 
 ## Hooks
 
-Four hooks ship in `hooks/hooks.json`, with their scripts in `scripts/`. They are
+Six hooks ship in `hooks/hooks.json`, with their scripts in `scripts/`. They are
 auto-discovered by Claude Code — no `plugin.json` entry is required. (Reindex stays on the
 `qmd` CLI — there is no MCP tool for `update`/`embed`; `status` only reports freshness.)
 
 | Event              | Matcher                 | Script                     | Purpose                                                                            |
 | ------------------ | ----------------------- | -------------------------- | --------------------------------------------------------------------------------- |
-| `SessionStart`     | `startup\|clear\|compact` | `session-index.sh`         | Injects a recency-capped index of recent vault notes for the current repo (`repos/<pwd-basename>/`) as session context — titles, dates, descriptions, and paths, not full bodies |
+| `SessionStart`     | `startup\|clear\|compact` | `session-index.sh`         | Injects a recency-capped index of recent vault notes for the current repo (`repos/<pwd-basename>/`) as session context — titles, dates, descriptions, and paths, not full bodies; also seeds the per-session recall state |
+| `SessionStart`     | `compact`               | `compact-restore.sh`       | Re-injects the notes `context-recall.sh` surfaced earlier in the session, so conversation-relevant context survives compaction (the Tier-1 index re-injects via `session-index.sh`, whose matcher also covers compact) |
 | `UserPromptSubmit` | —                       | `prompt-skill-reminder.sh` | Injects a skill reminder when the prompt signals a PR, an issue, or capturable knowledge (decision/learning/pattern/session) — nudging the matching note skill |
+| `UserPromptSubmit` | —                       | `context-recall.sh`        | BM25-matches each substantive prompt against the vault collection and injects a small index of NEW relevant notes — vault-wide (not pwd-scoped), each note at most once per session |
 | `PostToolUse`      | `Write\|Edit`           | `vault-note-indexer.sh`    | Runs `qmd update && qmd embed` when a `.md` file under `vault_path` is written, keeping the search index fresh |
 | `PreToolUse`       | `Bash`                  | `qmd-dehyphenate.sh`       | Rewrites `qmd search "a-b/c"` → `"a b c"` (BM25 tokenizes on hyphens and slashes)  |
 
@@ -72,15 +74,49 @@ newest-first, and emits a Tier-1 primer (index only — the agent reads any note
 It is additive and never fatal: missing `vault_path`, no matching `repos/<slug>/` folder, or
 no notes → silent no-op (exit 0, no output). The index is bounded by `HIVE_MIND_INDEX_LIMIT`
 (default 8), `HIVE_MIND_INDEX_DESC_MAX` (default 200), and a hard ~8,000-char budget guard,
-so it stays well under Claude Code's ~10,000-char `additionalContext` cap. Unlike the other three
-scripts it needs no `jq` — SessionStart injects plain stdout as context.
+so it stays well under Claude Code's ~10,000-char `additionalContext` cap. It and
+`compact-restore.sh` need no `jq` — SessionStart injects plain stdout as context, and
+session_id/source are sed-parsed from stdin.
+
+### Mid-session recall (`context-recall.sh` + `compact-restore.sh`)
+
+The per-prompt recall layer is **lex-only by contract**: `qmd search` (BM25) is an indexed
+lookup measured at ~0.2s per query with no LLM — `qmd query`/`qmd vsearch` load
+embedding/rerank models (seconds to tens of seconds + significant RAM) and must never be put
+on this hot path. qmd's BM25 is **AND-semantics with no OR operator** (one absent term → zero
+results), so a single bag-of-words query of the prompt would nearly always return nothing.
+Instead the prompt's content terms (stopwords/short tokens/numbers dropped) are queried as
+stride-2 pairs of adjacent terms, one small query per pair, unioned by max score — ≤5 queries,
+~0.6s measured end-to-end, bounded by the hook timeout.
+
+Noise is the real constraint, not latency — and **corroboration, not the score floor, is the
+precision knob**. Benchmarked against 75 real user prompts from past transcripts: with a 0.7
+floor alone, 99% of prompts surfaced hits (avg 16.6 candidate rows), and even at 0.9 generic
+"go ahead and commit" prompts scored 0.89–0.92 against workflow-heavy session notes — the same
+range as genuine topical hits, because qmd's normalized BM25 scores compress toward the top on
+a ~950-doc corpus. What separates topical from incidental is *agreement*: a note only counts
+if returned by ≥2 distinct pair queries (`HIVE_MIND_RECALL_MIN_PAIRS`, set 1 to disable),
+combined with a stoplist that includes dev-workflow vocabulary ("commit", "push", "pr" — never
+allowed to form pairs). That config injected on ~27% of benchmark prompts at ~70% top-hit
+relevance. The floor (default 0.85) tunes volume on top.
+
+Other controls: prompts under 40 chars, slash commands, and `!` passthroughs are skipped;
+injections are capped at 3 rows / ~2,500 chars and deduped per session via a seen file
+(`~/.cache/hive-mind/<session_id>.seen`, stale files swept after 7 days). `session-index.sh`
+seeds the seen file with its Tier-1 rows (so recall never re-surfaces them) and resets it on
+`startup`/`clear` but not `compact`; the file's `recall` rows double as the manifest
+`compact-restore.sh` replays after compaction. All three injection points emit **index rows
+only** (title · date · description · path, rendered from each note's frontmatter — qmd hit
+titles are section headings, not note titles); full note bodies are never injected. Tunables:
+`HIVE_MIND_RECALL_LIMIT`, `HIVE_MIND_RECALL_MIN_SCORE`, `HIVE_MIND_RECALL_MIN_PAIRS`,
+`HIVE_MIND_RECALL_MIN_PROMPT`, and `HIVE_MIND_COLLECTION` (defaults to `hive-mind`).
 
 Because the indexer hook re-indexes automatically, the note-creation skills no longer carry
 a manual `qmd update && qmd embed` step. The de-hyphenate hook is a safety net for the
 **CLI-fallback** `qmd search` (BM25) path only — the MCP-first path writes `lex` sub-queries
 de-hyphenated in the skill itself, and the hook touches neither `vsearch` nor MCP `query` calls.
-Skills still teach de-hyphenation since it informs the agent's query reasoning. The other three
-scripts require `jq`; `session-index.sh` does not.
+Skills still teach de-hyphenation since it informs the agent's query reasoning. The remaining
+scripts require `jq`; `session-index.sh` and `compact-restore.sh` do not.
 
 ## Plugin Configuration
 

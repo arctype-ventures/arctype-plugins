@@ -7,6 +7,11 @@
 # Additive and NEVER fatal: missing config, no matching repo folder, or no notes → exit 0 with
 # no output (silent no-op). It must never be noisy or block a session start.
 #
+# Side effect: seeds the per-session recall state ($STATE_DIR/<session_id>.seen) with the
+# injected rows, so context-recall.sh never re-surfaces a Tier-1 note and compact-restore.sh
+# knows what recall added beyond this index. session_id/source are sed-parsed from stdin to
+# keep this script jq-free; state ops are best-effort and never affect the index output.
+#
 # Config from env:
 #   HIVE_MIND_VAULT           absolute path to the vault (required; unset/missing → no-op)
 #   HIVE_MIND_INDEX_LIMIT     count cap: max notes in the index            (default 8)
@@ -20,8 +25,25 @@ VAULT="${VAULT/#\~/$HOME}"                           # expand leading ~ (matches
 LIMIT="${HIVE_MIND_INDEX_LIMIT:-8}"
 DESC_MAX="${HIVE_MIND_INDEX_DESC_MAX:-200}"
 BUDGET=8000                                          # headroom under the ~10000-char cap
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/hive-mind"
+TAB=$'\t'
 
 [[ -n "$VAULT" && -d "$VAULT" ]] || exit 0          # no vault → silent no-op
+
+# Recall seen-file lifecycle: startup/clear → fresh file (new conversation); compact → keep
+# (same conversation continues, already-surfaced notes stay suppressed). Resume never re-fires
+# this hook, and the file persisting on disk is exactly right — the replayed transcript still
+# contains every earlier injection.
+input=""
+[[ -t 0 ]] || input=$(cat 2>/dev/null || true)       # TTY guard keeps manual runs from hanging
+session_id=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)
+src=$(printf '%s' "$input" | sed -n 's/.*"source"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)
+seen_file=""
+if [[ -n "$session_id" ]] && mkdir -p "$STATE_DIR" 2>/dev/null; then
+  seen_file="$STATE_DIR/$session_id.seen"
+  [[ "$src" == "compact" ]] || : > "$seen_file"
+  find "$STATE_DIR" -name '*.seen' -mtime +7 -delete 2>/dev/null || true   # stale-session sweep
+fi
 
 # pwd-only scoping: basename of the working dir (no override, no fuzzy match).
 SLUG="$(basename "${CLAUDE_PROJECT_DIR:-$PWD}")"
@@ -53,6 +75,9 @@ while IFS= read -r f; do
     "${title:-$(basename "$f")}" "$date" "$desc" "${f#"$VAULT"/}"
   (( ${#out} + ${#row} > BUDGET )) && break                        # trim step 3: char guard (newest-first → drops oldest)
   out+="$row"
+  if [[ -n "$seen_file" ]] && ! grep -qxF "seed$TAB${f#"$VAULT"/}" "$seen_file" 2>/dev/null; then
+    printf 'seed\t%s\n' "${f#"$VAULT"/}" >> "$seen_file" 2>/dev/null || true
+  fi
   count=$((count + 1))
 done < <(
   find "$DIR" -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*.md' -print0 \
