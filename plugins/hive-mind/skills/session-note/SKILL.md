@@ -42,15 +42,34 @@ to that focus. Ignore session activity unrelated to the focus.
 
 **Update** — when a session note for this repo was already written earlier
 in this session, or the user asks to fold new developments into it. Update
-that note through the same quality gates instead of raw-editing it: re-read
-TAGS.md/LEXICON.md (step 4), run the step-6 entity search for entities newly
-introduced since the note was written, apply the edits, refresh the
-`updated:` frontmatter field, and report per step 11.
+that note through the same quality gates instead of raw-editing it — each
+gate below is a separate step, not optional:
 
-If work continues after a note is written this session, suggest an update
-when the new context clearly continues the note's thread. If the later work
-diverges to a different topic, do not fold it into the earlier note — write
-a new note instead.
+1. If the update adds any tag or introduces a new team term, re-read
+   TAGS.md and LEXICON.md in full (step 4) before editing — never add a
+   tag without re-validating against TAGS.md. If the update only adds
+   content under the note's existing tags, a quick existence check (grep
+   the tags in TAGS.md) suffices.
+2. Run the step-6 entity search for entities newly introduced since the
+   note was written.
+3. Map new content into the four standard sections (Learnings / Decisions /
+   Code Patterns / Problems Solved) — a verification pass becomes a
+   Learnings bullet or a Problems Solved entry framed as "verified X". Do
+   not invent an ad hoc section unless the content genuinely fits none of
+   the four AND the user confirms adding it.
+4. Apply the edits and refresh the `updated:` frontmatter field.
+5. Report per step 11.
+
+If work continues after a note is written this session, offer an update at
+a concrete moment: in the same turn you report the results of follow-up
+work that directly continues the note's thread (a verification run, a fix
+on the same PR), offer to fold it into the earlier note — do not wait for
+the user to ask. When the continuation is clear or the user asks for the
+update, select Update mode and state that choice in the step-11 report
+instead of asking first; ask before updating only when it is ambiguous
+whether the new work continues the thread. If the later work diverges to a
+different topic, do not fold it into the earlier note — write a new note
+instead.
 
 ### Self-invocation timing
 
@@ -67,14 +86,32 @@ When invoking this skill on your own (not from a user-typed command):
 
 ## Repository Resolution
 
-Determine the target repo directory dynamically from the current working
-directory and the vault structure.
+Determine the target repo directory dynamically from the invocation
+context, the current working directory, and the vault structure.
 
-### 1. Extract repo slug from `pwd`
+### 1. Determine the repo slug
 
-Use the basename of the current working directory (or its git root) as
-the repo slug. Use the name exactly as-is — do not strip suffixes or
-transform it.
+If the user's request or the focus text explicitly names a target repo,
+use that repo's slug directly and skip pwd-derivation — common when
+running the skill from the vault directory itself about work done in
+another repo.
+
+Otherwise derive the slug from the working directory: use the basename of
+the current working directory (or its git root). If the session is running
+in a linked git worktree, the directory name is the worktree's name (often
+branch-derived), NOT the repo slug — resolve the main repository name
+instead:
+
+```bash
+MAIN=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+[ -n "$MAIN" ] && REPO_SLUG=$(basename "$(dirname "$MAIN")")
+```
+
+(`--git-common-dir` points at the main repository's `.git` directory; its
+parent's basename is the repo slug. In a normal checkout this resolves to
+the same answer as the pwd basename, so it is safe to run unconditionally.)
+
+Use the name exactly as-is — do not strip suffixes or transform it.
 
 ### 2. Find the matching vault directory
 
@@ -230,7 +267,9 @@ Examples:
 
 1. Read the invocation arguments (see Invocation Modes) to determine mode
    (full vs focused vs update).
-2. Determine repo slug from `pwd` (basename of working directory or git root).
+2. Determine repo slug per Repository Resolution: an explicitly named target
+   repo (from the user's request or focus text) wins; otherwise derive from
+   `pwd`/git root, resolving a linked worktree to the main repository name.
 3. Resolve vault path from `${user_config.vault_path}`. Find the repo's sessions directory
    by checking `${user_config.vault_path}/repos/<repo-slug>/sessions` exists.
    Look up the project name from `${user_config.vault_path}/PROJECTS.md`.
@@ -297,11 +336,18 @@ Examples:
    query(searches=[{type:"lex", query:"<de-hyphenated entity>"}], collections=["${user_config.vault_collection}"], limit=5)
    ```
 
-   Always include one `lex` sub-query for the de-hyphenated repo slug from
-   step 2, and re-run the entity queries for this note's actual content even
-   if earlier searches this session covered similar ground — those results
-   were scoped to a different question, and the linking pass must not depend
-   on incidental context from prior searches.
+   Always include one `lex` sub-query whose query string is ONLY the
+   de-hyphenated repo slug from step 2 — nothing appended, nothing merged.
+   Folding the slug into a longer topical phrase (`"risk assessments
+   display logic"`) does NOT satisfy this requirement: it buries repo-wide
+   hits under topic-specific scoring. The topical entity queries do not
+   need to contain the repo slug at all — run the bare slug query
+   (`"risk assessments"`) as its own sub-query alongside them.
+
+   Re-run the entity queries for this note's actual content even if
+   earlier searches this session covered similar ground — those results
+   were scoped to a different question, and the linking pass must not
+   depend on incidental context from prior searches.
 
    **Semantic (one pass for primary topic)** — One `vec` sub-query for
    the note's overall topic, phrased as a natural language concept:
@@ -331,8 +377,11 @@ Examples:
    For each remaining result, record:
    - Title, vault path (strip `qmd://vault/` prefix and `.md` extension)
    - Pre-formatted wikilink: `[[<vault-path>|<title>]]`
-   - Tags (from the result metadata, or read the frontmatter of 2–3 top
-     results with the qmd MCP `get` tool — CLI `qmd get "<filepath>" -l 20` as fallback)
+   - Tags — capture these in the same lookup that fetches the title:
+     whichever tool is used (qmd MCP `get`, CLI `qmd get "<filepath>" -l 20`,
+     or a frontmatter read), it must return the `tags:` field, not just
+     `title:`. A title-only grep leaves step 8's tag cross-reference with
+     no data.
    - Brief relevance note explaining why this result relates to the new note
 
    Note which domain tags recur across related notes — this is a signal

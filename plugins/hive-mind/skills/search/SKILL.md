@@ -168,6 +168,12 @@ Each hit returns a title, file path, score, and a snippet.
 - Drop structural/template files (`CLAUDE.md`, `TAGS.md`, `FRONTMATTER.md`, any `index.md`).
 - Or pass `minScore` to the tool.
 
+If the surviving top hits are clearly the wrong content type for an
+unambiguous query (e.g. a glossary entry outranks the meeting note you were
+asked for), refine and re-query before touching the filesystem: add a
+disambiguating `lex` term (`weekly sync`) or a term matching the vault's
+layout (`meetings`), rather than enumerating directories directly.
+
 ### 3. Retrieve full notes before relying on them
 
 Read any note that looks relevant with the qmd MCP `get` tool — don't answer from snippets:
@@ -182,12 +188,22 @@ content in your answer, confirm you fetched that hit — having fetched other
 hits does not license citing an unfetched one from its snippet.
 
 `multi_get` batch-retrieves the specific paths search ranked as relevant — do
-not glob a whole directory as a shortcut past score filtering. It skips files
+not glob a whole directory as a shortcut past score filtering. The same goes
+for any directory-listing shortcut (Bash `ls`/`find`, Glob): the ranked
+results are the interface, not the vault's file layout. It skips files
 larger than `maxBytes` (default 10KB): a skipped file returns a `[SKIPPED ...]`
 marker, and an oversized one may come back mostly truncated. Either way,
 follow up with an individual `get(file=...)` on that path (with a line offset
 into the section you need, or a raised `maxBytes`) rather than treating the
 note as missing or empty.
+
+**Self-invoked? Disclose before proceeding.** Immediately after retrieval —
+before your next non-search tool call, and always before the first file
+write/edit — state in one line which notes you are relying on:
+`Using hive-mind notes: <title> (<date>), …`. Naming them only in a final
+recap defeats the point (letting the user catch a wrong context pull early).
+If a fetched note turns out to be irrelevant, say that too rather than
+silently dropping it.
 
 ### 4. Freshness check (if results are empty or thin)
 
@@ -215,9 +231,7 @@ Then offer follow-up actions:
 
 When you invoked this skill yourself (context-gathering inside a larger task,
 not a user-typed `/hive-mind:search`), the list-and-offer format is optional —
-but never absorb results silently: state in one line which notes you are
-relying on (title + date) before proceeding, so the user can catch a wrong
-context pull early.
+the mandatory disclosure line in step 3 replaces it.
 
 ## CLI Fallback
 
