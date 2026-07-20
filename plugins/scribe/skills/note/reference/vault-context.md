@@ -4,6 +4,8 @@ BM25 + semantic search over the vault to find wikilinks worth weaving into the m
 
 Skip this entire flow if `qmd` is not installed (`command -v qmd`). The note will still be written, just without vault wikilinks beyond resolved attendees.
 
+If `qmd` IS installed but no collection covers this vault (check `qmd status` for a collection matching `${user_config.vault_collection}`), STOP and ask the user — they must index the vault or point at the right collection before the flow continues. This is a hard gate: do not substitute manual grep/Read discovery, and do not write the note without resolving it.
+
 qmd may be exposed as an MCP server instead of (or alongside) the CLI. Use whichever is present — `qmd search` → a `lex` sub-query, `qmd vsearch` → `vec`, mapping `-n`→`limit`, `-c`→`collections`, `--intent`→`intent`.
 
 ## 1. Extract entities

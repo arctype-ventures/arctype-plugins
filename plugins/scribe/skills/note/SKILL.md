@@ -52,7 +52,7 @@ SENTINEL="$HOME/.local/state/scribe/sessions/$SESSION/.processed"
 
 - If `$ARTIFACT` is missing → abort: "No artifact found for session $SESSION."
 - If `$SENTINEL` exists and the user passed this session id explicitly → abort: "Session $SESSION has already been processed."
-- If `$SENTINEL` exists on the **default** (most-recent) session → don't dead-end: list `Done` sessions lacking a `.processed` sentinel and ask which to process; abort only if none remain.
+- If `$SENTINEL` exists on the **default** (most-recent) session → don't dead-end: list `Done` sessions lacking a `.processed` sentinel and ask which to process; abort only if none remain. When aborting because none remain, also check `scribe sessions` for sessions stuck in `Recording`/`Processing` state and mention any in the abort message — they never produce an artifact on their own and usually indicate a crashed or leaked recording.
 
 Read the artifact JSON and capture: `session_id`, `started_at`, `stopped_at`, `duration_seconds`, `transcript_text`, `speakers` (label + duration + sample utterances), `segments`, and the engine metadata for the step 11 report (`transcription.engine`, `transcription.model`, `diarization.engine` — may be absent in older artifacts).
 
@@ -107,7 +107,7 @@ Replace each `SPEAKER_N:` prefix in `transcript_text` with `<name>:`. Unresolved
 
 ## 5. Vault context discovery
 
-If `qmd` is not installed, skip. Otherwise extract entities from the attributed transcript, run BM25 per entity + one semantic pass, filter results, and build pre-formatted wikilinks for the LLM to weave into prose. Also produces `flagged_terms` and handles duplicate detection.
+If `qmd` is not installed, skip. If `qmd` is installed but no collection covers this vault, STOP and ask the user before proceeding — this is a hard gate, not a fallback situation (see the reference). Otherwise extract entities from the attributed transcript, run BM25 per entity + one semantic pass, filter results, and build pre-formatted wikilinks for the LLM to weave into prose. Also produces `flagged_terms` and handles duplicate detection.
 
 Full procedure in [reference/vault-context.md](reference/vault-context.md).
 
@@ -119,7 +119,7 @@ Prompt yourself (using your own LLM capability — no subprocess) with:
 - Today's date: `date -I`
 - Resolved attendee list (with wikilinks where available) from `CandidateAttendees[]`
 - `${user_config.vault_path}/TAGS.md` (for the tag pool)
-- `${user_config.vault_path}/LEXICON.md` — normalize every transcript token matching a listed variant to its **canonical** spelling in the note prose; never emit a known variant. When the transcript yields a **new** variant of an entity you resolve with confidence, record it per LEXICON.md's *Maintaining it* section (variant row, plus an alias on the entity's note where one exists) and list the additions in the step 11 report. Surface lower-confidence resolutions in the report as judgment calls; when the user confirms one, record it the same way.
+- `${user_config.vault_path}/LEXICON.md` — normalize every transcript token matching a listed variant to its **canonical** spelling in the note prose; never emit a known variant. When the transcript yields a **new** variant of an entity you resolve with confidence, record it per LEXICON.md's *Maintaining it* section (variant row, plus an alias on the entity's note where one exists) and list the additions in the step 11 report. Surface lower-confidence resolutions in the report as judgment calls; when the user confirms one, record it the same way. Treat a term that could plausibly be a **distinct** product/project name — not just a mis-hearing of a known entity — as a judgment call: do not auto-record it, even when a phonetic match to an existing entry seems likely. Keep the report's buckets separate: auto-recorded high-confidence variants go under recorded additions; anything under judgment calls is pending unless prefixed "(already recorded — flag if wrong)".
 - If a transcribed person name resolves to no candidate attendee, vault person, or LEXICON variant, treat it as a suspected mis-hearing: keep the name out of the note prose (write the claim unattributed) and list it in the step 11 report.
 - `${user_config.vault_path}/templates/meeting-note.md` (the canonical structure to fit)
 - Vault context from step 5: pre-formatted wikilinks + glossary term descriptions, inserted at first mention of related notes
@@ -152,13 +152,21 @@ Produce JSON matching the template's body sections (no scribe-specific fields, n
 - Sources of truth, in order of preference:
   1. `USER_TITLE` from step 1 if supplied — honor it; you may lightly normalize casing/spacing (`weekly sync` → `Weekly Sync`) but don't add or remove words.
   2. The calendar event title from step 2 (strip parenthetical clutter, attendee names, time markers).
-  3. Inferred from the transcript — pick the shortest faithful name for the meeting series or one-off subject.
+  3. Inferred from the transcript — pick the shortest faithful name for the
+     meeting series or one-off subject. Name the meeting, not the discussion:
+     avoid activity/content descriptors (Review, Productization, Deep Dive)
+     standing in as the title. If a project or product name recurs
+     throughout, prefer `<Project> <Meeting type>` (e.g. `Proxio Product
+     Sync`) over a phrase describing what was discussed. If the right name
+     is not clear — e.g. prior vault notes show similar but distinct series
+     titles — ask the user to confirm the title before writing the note
+     rather than guessing.
 
 **`description` rules (stricter than FRONTMATTER.md for readability):**
 
 - One sentence. Aim for under 20 words. Skim-readable — something the user can parse at a glance in Obsidian's file list and Dataview tables.
 - Plain text only. No `[[wikilinks]]`, no markdown. Wikilinks belong in the body, not in frontmatter descriptions.
-- State the meeting's purpose and primary subject, not an exhaustive topic list. If you're listing more than two topics, you're writing a discussion summary — move that content into `## Discussion` and cut the description back.
+- State the meeting's purpose and primary subject, not an exhaustive topic list. If you're listing more than two topics, you're writing a discussion summary — move that content into `## Discussion` and cut the description back. Before finalizing, count the distinct topics your draft description names — more than two means cut it back to the meeting's primary purpose.
 
 If any field is missing or null, treat it as empty. Never abort on partial JSON.
 
@@ -270,7 +278,7 @@ A `0 new` / already-indexed result here is success — a Write hook may have ind
 
 ## 10. Confirm Pass A attributions
 
-List every Pass A attribution with its similarity in the step 11 report. When every match corresponds to a user-supplied attendee (and every supplied attendee is matched), treat the argument list as pre-confirmation — report and invite correction; do not prompt. Otherwise confirm the uncovered matches in **one consolidated prompt**, not one per speaker:
+List every Pass A attribution with its similarity in the step 11 report. When every match corresponds to a user-supplied attendee (and every supplied attendee is matched), treat the argument list as pre-confirmation — report and invite correction; do not prompt. This exception can never apply when `USER_ATTENDEES` was empty at step 1 — a bare invocation always confirms. In every other case, confirm the uncovered matches in **one consolidated prompt**, not one per speaker — transcript corroboration strengthens a match but never replaces the prompt:
 
 > Attributed `SPEAKER_00` to **Alice Chen** via voice enrollment (similarity 0.82). Confirm? [Y/n]
 
@@ -304,3 +312,9 @@ If any terms were flagged, offer:
 > Create glossary stubs for any flagged terms? [y/N]
 
 On `y`, create each as a glossary stub per [reference/stubs.md](reference/stubs.md).
+
+If any person names were reported unresolved (suspected mis-hearings kept out of prose), offer in the same message:
+
+> Create person stubs for any of these names? [y/N]
+
+Only create a person stub once the user confirms the identity (correct spelling / full name) — never stub a suspected mis-hearing as-is. On confirmation, create it per [reference/stubs.md](reference/stubs.md).
