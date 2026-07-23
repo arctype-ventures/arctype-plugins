@@ -33,8 +33,8 @@ The plugin ships six hooks (in `hooks/hooks.json`) that run automatically:
 - **Compaction restore** — after context compaction, the session-start index re-injects
   automatically, and the notes recalled mid-session are re-injected too, so conversation-relevant
   memories survive the squeeze.
-- **Skill reminders** — when your prompt mentions a PR, an issue, or knowledge worth keeping
-  (a decision, learning, or pattern), a reminder nudges Claude toward the matching note skill.
+- **Skill reminders** — when your prompt mentions knowledge worth keeping (a decision, learning,
+  or pattern), a reminder nudges Claude toward the session-note skill.
 - **Auto-indexing** — after a note is written under your vault, `qmd update && qmd embed` runs
   in the background so it's immediately searchable.
 - **Search auto-fix** — CLI-fallback `qmd search` queries are de-hyphenated and de-slashed

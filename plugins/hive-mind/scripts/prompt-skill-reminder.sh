@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # UserPromptSubmit hook: pattern-match keywords and inject skill reminders.
-# Nudges auto-invocation of the hive-mind note skills when the user's prompt
-# signals a PR, an issue, or knowledge worth capturing in a session note.
+# Nudges auto-invocation of the hive-mind session-note skill when the user's
+# prompt signals knowledge worth capturing in a session note.
 
 input=$(cat)
 prompt=$(echo "$input" | jq -r '.prompt // ""')
@@ -13,17 +13,9 @@ lower=$(echo "$prompt" | tr '[:upper:]' '[:lower:]')
 
 context=""
 
-# Match PR note patterns -> pr-note skill (most specific: explicit note intent or a #<n> ref)
-if echo "$lower" | grep -qE '\b(pr note|pull request note|(document|write up|write-up) (this |the )?(pr|pull request)|(pr|pull request) #?[0-9]+)\b'; then
-  context="Reminder: use /hive-mind:pr-note to document this pull request in the vault."
-
-# Match issue note patterns -> issue-note skill (explicit note intent or a #<n> ref)
-elif echo "$lower" | grep -qE '\b(issue note|(document|write up|write-up|investigate) (this |the )?issue|issue #?[0-9]+)\b'; then
-  context="Reminder: use /hive-mind:issue-note to create an investigation brief for this issue in the vault."
-
 # Match session/capture patterns -> session-note skill
-elif echo "$lower" | grep -qE '\b(session note|capture this session|what did we learn|end of session|wrap up session|session summary)\b'; then
-  context="Reminder: use /hive-mind:session-note to capture session insights into a vault note."
+if echo "$lower" | grep -qE '\b(session note|capture this session|what did we learn|end of session|wrap up session|session summary)\b'; then
+  context="Reminder: use /hive-mind:session-note to capture session insights into a vault note — focus on durable project/code knowledge, not a play-by-play of everything done this session."
 
 # Match decision/chose/picked patterns -> session-note skill
 elif echo "$lower" | grep -qE '\b(we decided|i decided|decision made|decided to|chose to|picked|going with|settled on)\b'; then
