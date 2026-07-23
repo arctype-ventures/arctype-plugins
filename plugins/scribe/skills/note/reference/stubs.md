@@ -2,6 +2,13 @@
 
 Person and glossary stubs created by this skill. All slugs are kebab-cased full names / terms.
 
+**Copy, don't compose.** Create stubs by copying — `cp` the matching vault
+template (`templates/person-note.md`, `templates/term-note.md`) to the
+target path, then edit the placeholders and fields to the values below.
+Copying pins the structure to the vault's canonical shape; the YAML in this
+file documents the expected fields, but the freshly-copied template wins
+wherever they disagree.
+
 ## Person stub
 
 Path: `${user_config.vault_path}/people/<slug>.md`
@@ -73,3 +80,11 @@ updated: <YYYY-MM-DD>
 ```
 
 Body: one-paragraph stub referencing the meeting where the term appeared.
+
+## Other note types
+
+A flagged term is not always a glossary term — some resolve to a different
+note type (e.g. a repo). Create those in that type's directory the same way:
+copy its template from `${user_config.vault_path}/templates/` when one
+exists, otherwise copy an analogous existing note of that type and edit it
+to specs. Create only on user approval, like glossary stubs.

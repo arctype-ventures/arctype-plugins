@@ -119,7 +119,7 @@ Prompt yourself (using your own LLM capability — no subprocess) with:
 - Today's date: `date -I`
 - Resolved attendee list (with wikilinks where available) from `CandidateAttendees[]`
 - `${user_config.vault_path}/TAGS.md` (for the tag pool)
-- `${user_config.vault_path}/LEXICON.md` — normalize every transcript token matching a listed variant to its **canonical** spelling in the note prose; never emit a known variant. When the transcript yields a **new** variant of an entity you resolve with confidence, record it per LEXICON.md's *Maintaining it* section (variant row, plus an alias on the entity's note where one exists) and list the additions in the step 11 report. Surface lower-confidence resolutions in the report as judgment calls; when the user confirms one, record it the same way. Treat a term that could plausibly be a **distinct** product/project name — not just a mis-hearing of a known entity — as a judgment call: do not auto-record it, even when a phonetic match to an existing entry seems likely. Keep the report's buckets separate: auto-recorded high-confidence variants go under recorded additions; anything under judgment calls is pending unless prefixed "(already recorded — flag if wrong)".
+- `${user_config.vault_path}/LEXICON.md` — normalize every transcript token matching a listed variant to its **canonical** spelling in the note prose; never emit a known variant. When the transcript yields a **new** variant of an entity you resolve with confidence, record it per LEXICON.md's *Maintaining it* section (variant row, plus an alias on the entity's note where one exists) and list the additions in the step 11 report. Surface lower-confidence resolutions in the report as judgment calls; when the user confirms one, record it the same way — but not every confirmed judgment call warrants a LEXICON row: record it only when the mis-hearing is a systematic phonetic pattern ASR would plausibly repeat (e.g. a real name that phonetically shadows the canonical one). One-off audio dropouts or soft-speech garbles stay out of the LEXICON even after confirmation — fix those in prose only. Treat a term that could plausibly be a **distinct** product/project name — not just a mis-hearing of a known entity — as a judgment call: do not auto-record it, even when a phonetic match to an existing entry seems likely. Keep the report's buckets separate: auto-recorded high-confidence variants go under recorded additions; anything under judgment calls is pending unless prefixed "(already recorded — flag if wrong)".
 - If a transcribed person name resolves to no candidate attendee, vault person, or LEXICON variant, treat it as a suspected mis-hearing: keep the name out of the note prose (write the claim unattributed) and list it in the step 11 report.
 - `${user_config.vault_path}/templates/meeting-note.md` (the canonical structure to fit)
 - Vault context from step 5: pre-formatted wikilinks + glossary term descriptions, inserted at first mention of related notes
@@ -190,7 +190,13 @@ For each attendee who (a) is attributed to a speaker (not "Unknown"), AND (b) ha
 
 ## 9. Write the note
 
-The canonical format is `${user_config.vault_path}/templates/meeting-note.md`. Read it fresh every invocation and follow exactly.
+The canonical format is `${user_config.vault_path}/templates/meeting-note.md`.
+Do not compose the note from scratch: after computing `$TARGET` below, copy
+the template to `$TARGET` (`cp`), then fill it in with targeted edits —
+replace the `{{title}}`/`{{date}}` placeholders, populate the frontmatter
+values, write the body sections, and delete any section left empty. Copying
+pins the note to the template's exact structure; never add fields or
+sections the template lacks.
 
 **Hard rules — vault conventions, not scribe preferences:**
 
@@ -205,6 +211,7 @@ The canonical format is `${user_config.vault_path}/templates/meeting-note.md`. R
 DATE=$(jq -r '.started_at[0:10]' "$ARTIFACT")   # the meeting date — never the processing date
 SLUG=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | tr -s '-' | sed 's/^-//;s/-$//' | cut -c1-50)
 TARGET="${user_config.vault_path}/meetings/$DATE-$SLUG.md"
+cp "${user_config.vault_path}/templates/meeting-note.md" "$TARGET"
 ```
 
 Frontmatter `created:` is `$DATE` (the meeting date); `updated:` is today (`date -I`). A backlogged session must never be dated by when `/scribe:note` happens to run.
@@ -230,9 +237,14 @@ updated: <date>
 ---
 ```
 
+This skeleton is illustrative — it mirrors the vault template at the time of
+writing, and templates evolve. The copied template and `FRONTMATTER.md`
+define the actual field set; wherever they disagree with this example,
+follow them.
+
 Only list confirmed identities in `attendees`. Never list `SPEAKER_N (unresolved)` or "Unknown Speaker N".
 
-**Body** — follow the template section order; omit any empty section; do not invent sections outside the template.
+**Body** — fill the copied template's sections in place; delete any section left empty; do not invent sections outside the template.
 
 ```markdown
 ## Attendees
@@ -309,9 +321,15 @@ Flagged terms (<count>):
 
 If any terms were flagged, offer:
 
-> Create glossary stubs for any flagged terms? [y/N]
+> Create stubs for any flagged terms? [y/N]
 
-On `y`, create each as a glossary stub per [reference/stubs.md](reference/stubs.md).
+On `y`, create each stub by copying the matching vault template and editing
+it to specs — never compose a stub from scratch (see
+[reference/stubs.md](reference/stubs.md)). A flagged term is not always a
+glossary term: when it is really another note type (e.g. a repo), it belongs
+in that type's directory — copy that type's template from
+`${user_config.vault_path}/templates/` when one exists, otherwise copy an
+analogous existing note of the same type and edit it to specs.
 
 If any person names were reported unresolved (suspected mis-hearings kept out of prose), offer in the same message:
 
