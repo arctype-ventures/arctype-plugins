@@ -145,8 +145,10 @@ There is no corresponding tag for either field.
 
 ## Valid Tags
 
-All tags MUST exist in `${user_config.vault_path}/TAGS.md`. Read that file every
-time you generate a note — do not rely on a cached or hardcoded list.
+All tags MUST exist in `${user_config.vault_path}/TAGS.md`. Read that file fresh in
+every invocation that generates or updates a note — an earlier read this
+session (including by another skill) does not count, and do not rely on a
+cached or hardcoded list.
 
 ### Tag Rules
 
@@ -275,7 +277,12 @@ Examples:
    Look up the project name from `${user_config.vault_path}/PROJECTS.md`.
 4. Read `${user_config.vault_path}/TAGS.md`, `${user_config.vault_path}/LEXICON.md`, and
    `${user_config.vault_path}/templates/session-note.md` to get the current valid tag list,
-   the canonical spellings of team terms, and the note template. Use the template as
+   the canonical spellings of team terms, and the note template. Read them
+   as three separate tool calls in this invocation — do not concatenate
+   them into one command (TAGS.md alone can approach tool-output limits,
+   silently truncating whatever follows), and do not count a read made
+   earlier in the session by another skill or invocation: a prior
+   in-context read does not satisfy this step. Use the template as
    the structural starting point for the generated note — it defines the
    frontmatter fields and body sections. Apply the canonical spelling from `LEXICON.md`
    to any team term, product, person, or portfolio-company name; never emit a known variant.
@@ -286,7 +293,10 @@ Examples:
 
    **6a. Extract search entities** — From the extracted content (step 5),
    identify every named entity that plausibly exists as its own vault note.
-   Entity types by priority:
+   Only entities present in the step-5 extracted content qualify — a name,
+   tool, or term that surfaced in raw session activity (an incidental
+   query result, a log line) but did not carry into Learnings/Decisions/
+   Patterns/Problems is not a search candidate. Entity types by priority:
 
    | Priority    | Entity type                         | Examples                        | Always query?    |
    | ----------- | ----------------------------------- | ------------------------------- | ---------------- |
@@ -362,7 +372,10 @@ Examples:
 
    If total BM25 hits across all entity queries already exceed 8 unique
    notes, the semantic pass may be skipped — the vault has been adequately
-   sampled.
+   sampled. This is a counted gate, not a suggestion: tally the unique
+   note paths across your BM25 results; at 8 or fewer, the `vec` query is
+   required. Either way, carry the outcome to the step-11 report —
+   "semantic pass ran" or "skipped (N unique BM25 notes)".
 
    No `qmd update` here — re-indexing is handled automatically by the
    plugin's `PostToolUse` indexer hook after the note is written.
@@ -412,8 +425,10 @@ Examples:
      to it on first mention using `[[glossary/<slug>|<Title>]]`.
    - Place links in running prose, not in a separate section. Example:
      "This builds on the approach from [[repos/trusted-services-lite/2026-02-21-session-eca-vs-session-auth|ECA vs Session Auth]]."
-   - Do not force links. A note with zero wikilinks is better than a note
-     with irrelevant ones.
+   - Do not force links. Before inserting a wikilink, confirm the target's
+     topic actually appears in this note's extracted content — a search
+     hit alone is not grounds to link. A note with zero wikilinks is
+     better than a note with irrelevant ones.
    - Do not add a separate "Related Notes" or "See Also" section.
 
 7. Generate the note content following the output format. Use the linking
@@ -434,5 +449,11 @@ Examples:
 10. Write the file to the target directory. The plugin's `PostToolUse`
     indexer hook re-runs `qmd update && qmd embed` automatically, so the
     new note becomes searchable without a manual step.
-11. Report to the user: file path, title, which sections were populated,
-    the number of wikilinks added, and which notes were linked.
+11. Report to the user as its own clearly delineated block — never folded
+    into an unrelated summary (e.g. one clause inside a PR recap):
+    - File: <full path> / Title: <title>
+    - Sections: which of the four were populated
+    - Wikilinks (N): linked note titles
+    - Tags: tags used; note any added to TAGS.md
+    - Semantic pass: ran, or skipped (N unique BM25 notes)
+    - Duplicate check: outcome and reasoning, when a ≥0.85 hit occurred
