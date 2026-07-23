@@ -161,6 +161,11 @@ qmd MCP `query` tool with `collections: ["${user_config.vault_collection}"]` and
 
 Each hit returns a title, file path, score, and a snippet.
 
+If you used ToolSearch to load the qmd MCP tools, that call only locates
+them — it is not the search. Follow it immediately with an actual `query`
+call: a run where no `query` (or CLI-fallback search) executed is a skipped
+search, not a completed one.
+
 ### 2. Filter results
 
 - Drop `lex` hits scoring < 0.50.
@@ -168,11 +173,16 @@ Each hit returns a title, file path, score, and a snippet.
 - Drop structural/template files (`CLAUDE.md`, `TAGS.md`, `FRONTMATTER.md`, any `index.md`).
 - Or pass `minScore` to the tool.
 
-If the surviving top hits are clearly the wrong content type for an
-unambiguous query (e.g. a glossary entry outranks the meeting note you were
-asked for), refine and re-query before touching the filesystem: add a
-disambiguating `lex` term (`weekly sync`) or a term matching the vault's
-layout (`meetings`), rather than enumerating directories directly.
+If the surviving top hits are clearly the wrong content type or clearly
+off-topic for an unambiguous query (e.g. a glossary entry outranks the
+meeting note you were asked for, or the only hit concerns a different
+subsystem entirely), refine and re-query before touching the filesystem:
+add a disambiguating `lex` term (`weekly sync`) or a term matching the
+vault's layout (`meetings`), rather than enumerating directories directly.
+The same rule covers recency doubts ("most recent X" — did the search
+surface the latest note?): re-query with a higher `limit` and a `lex` term
+for the note-type folder (e.g. `meetings`), then sort the dated filenames —
+do not fall back to `ls`/`find`/`Glob` or a wildcard `multi_get`.
 
 ### 3. Retrieve full notes before relying on them
 
@@ -185,10 +195,21 @@ multi_get(pattern="<path1>,<path2>")        # batch retrieval; the parameter is 
 
 `get` supports a line offset (`file="path.md:100"`). Before citing any hit's
 content in your answer, confirm you fetched that hit — having fetched other
-hits does not license citing an unfetched one from its snippet.
+hits does not license citing an unfetched one from its snippet. This holds
+across turns: a snippet absorbed now and surfaced later (a closing summary,
+a different task) still needs a `get` behind it. Before any answer that
+cites vault notes, check each title/date you are citing against the
+`get`/`multi_get` calls you actually made — drop or hedge any citation
+without one.
 
-`multi_get` batch-retrieves the specific paths search ranked as relevant — do
-not glob a whole directory as a shortcut past score filtering. The same goes
+`multi_get` batch-retrieves the specific paths search ranked as relevant —
+pass exact paths from your results, comma-separated. Do not rely on wildcard
+patterns to reach notes search didn't return (a non-matching glob silently
+returns nothing), do not glob a whole directory as a shortcut past score
+filtering, and do not substitute paths you merely suspect are relevant from
+outside context (git history, prior sessions) for the paths the query
+returned — if you believe an unreturned note is relevant, issue a new query
+naming it rather than fetching it blind. The same goes
 for any directory-listing shortcut (Bash `ls`/`find`, Glob): the ranked
 results are the interface, not the vault's file layout. It skips files
 larger than `maxBytes` (default 10KB): a skipped file returns a `[SKIPPED ...]`
@@ -197,15 +218,35 @@ follow up with an individual `get(file=...)` on that path (with a line offset
 into the section you need, or a raised `maxBytes`) rather than treating the
 note as missing or empty.
 
-**Self-invoked? Disclose before proceeding.** Immediately after retrieval —
-before your next non-search tool call, and always before the first file
-write/edit — state in one line which notes you are relying on:
-`Using hive-mind notes: <title> (<date>), …`. Naming them only in a final
-recap defeats the point (letting the user catch a wrong context pull early).
-If a fetched note turns out to be irrelevant, say that too rather than
-silently dropping it.
+Vault notes are point-in-time snapshots, and score tracks relevance, not
+recency — a high-ranking older note can be superseded by a lower-ranking
+newer one that updates its assumptions. Age alone doesn't make a note
+wrong; treat this as judgment, not a rule. But before repeating a note's
+claim about current code ("X lives in Y", "Z was fixed in W"), spot-check
+it against the live source — especially when the note is months old or a
+newer note contradicts it — and if the claim no longer holds, say so
+rather than repeating it as fact.
 
-### 4. Freshness check (if results are empty or thin)
+### 4. Disclose before anything else — blocking gate (self-invoked runs)
+
+When you invoked this skill yourself, retrieval is not finished until you
+have disclosed it. Your very next action after the last `get`/`multi_get`
+— before ANY other tool call: Bash, Read, Glob, a subagent dispatch, or
+invoking another skill — is to state one line, one of:
+
+- `Using hive-mind notes: <title> (<date>), …` — the notes you are relying on
+- Which fetched hits you checked and rejected as irrelevant
+- That nothing cleared the relevance bar and you are proceeding without
+  vault context
+
+Silently moving on without one of these three is not permitted. Emit the
+line even if you plan to keep investigating and will discuss the notes more
+fully later — do not defer it into a later status update or the final
+answer. Naming notes only in a final recap defeats the point: the user must
+be able to catch a wrong context pull before it drives further work.
+(User-typed invocations present results in step 6 instead.)
+
+### 5. Freshness check (if results are empty or thin)
 
 Before concluding "nothing found," call the qmd MCP `status` tool. If `needsEmbedding > 0`
 (or the `${user_config.vault_collection}` collection's `lastUpdated` predates a note you expect), the index is
@@ -213,7 +254,7 @@ stale, not the vault empty. The `PostToolUse` indexer hook normally runs `qmd up
 embed` after any vault write; if it hasn't caught up, run that and retry rather than looping
 or reporting "nothing found."
 
-### 5. Present results
+### 6. Present results
 
 Present results as a concise list:
 
@@ -231,7 +272,7 @@ Then offer follow-up actions:
 
 When you invoked this skill yourself (context-gathering inside a larger task,
 not a user-typed `/hive-mind:search`), the list-and-offer format is optional —
-the mandatory disclosure line in step 3 replaces it.
+the mandatory disclosure gate in step 4 replaces it.
 
 ## CLI Fallback
 
@@ -265,4 +306,4 @@ as the MCP `intent`.
 - If the MCP tools are unavailable or failing at the transport level, retry
   once via the CLI fallback before flagging to the user
 - If both surfaces error, stop immediately and flag to the user
-- If no results: check freshness (step 4), then suggest a different search mode or broader terms
+- If no results: check freshness (step 5), then suggest a different search mode or broader terms
