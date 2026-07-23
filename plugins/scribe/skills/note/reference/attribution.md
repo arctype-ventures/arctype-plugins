@@ -24,6 +24,17 @@ Output shape:
 
 Record `speaker_label → enrolled_name` for every match with `similarity >= ${user_config.voice_similarity_threshold}` (default 0.75). Speakers below the threshold carry forward unattributed.
 
+Before treating a sub-threshold match as a stale or missing enrollment,
+compare the artifact's distinct speaker-label count against the number of
+expected attendees. Fewer labels than attendees means diarization
+under-clustered — typical of shared-room / single-laptop recordings where
+several people share one far-field mic. Under-clustering degrades similarity
+for everyone, so low matches are expected: do not offer re-enrollment or
+`scribe voices confirm-from-session` from such a session by default
+(enrolling a contaminated cluster makes future matches worse). Note the
+likely cause in the step-11 report and confirm the recording setup with the
+user before suggesting any voice action.
+
 ## Pass B — LLM-inferred from calendar
 
 For each speaker not attributed in Pass A:
@@ -84,7 +95,9 @@ For each still-unattributed speaker:
    - **Someone else** → prompt for a name; check for an existing slug; mark for stub creation if missing.
    - **Unknown** → label stays `Unknown Speaker <N>` throughout the note. No stub. No voice-save offer.
 
-3. After each non-Unknown attribution, offer:
+3. After each non-Unknown attribution, offer (skip the offer entirely when
+   under-clustering was detected in Pass A — a merged cluster must not be
+   enrolled under any single person's name):
 
    > Save Speaker <N>'s voice as **<name>**? Lets Pass A auto-attribute next time. [y/N]
 
